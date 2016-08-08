@@ -1,0 +1,69 @@
+kind: ReplicationController
+apiVersion: v1
+
+metadata:
+  name: monasca-storm-thresh
+  namespace: monasca
+  labels:
+    system: openstack
+    service: monitoring
+
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        component: monasca-storm-thresh
+    spec:
+      nodeSelector:
+        zone: farm
+      volumes:
+        - name: openstack-kube
+          gitRepo:
+            repository: {{cluster_config['cluster.configuration.repository']}}
+            revision: {{cluster_config['cluster.configuration.revision']}}
+        - name: cluster-config
+          configMap:
+            name: cluster-config
+        - name: cluster-secret
+          secret:
+            secretName: cluster-secret
+      containers:
+        - name: monasca-storm-thresh
+          image: docker.mo.sap.corp/monasca/monasca-storm-thresh:latest
+          imagePullPolicy: Always
+#          securityContext:
+#            privileged: true
+          command:
+            - dumb-init
+          args:
+            - /openstack-kube/openstack-kube/scripts/monasca/storm-thresh_start
+          ports:
+            - name: stormthresh
+              containerPort: {{cluster_config['monasca.storm.port.public']}}
+            - name: strmthrshadmin
+              containerPort: {{cluster_config['monasca.storm.port.admin']}}
+          volumeMounts:
+            - mountPath: /openstack-kube
+              name: openstack-kube
+            - mountPath: /cluster-config
+              name: cluster-config
+            - mountPath: /cluster-secret
+              name: cluster-secret
+          env:
+            - name: MONASCA_KAFKA_PORT_INTERNAL
+              value: "{{cluster_config['monasca.kafka.port.internal']}}"
+            - name: MONASCA_ZOOKEEPER_PORT_INTERNAL
+              value: "{{cluster_config['monasca.zookeeper.port.internal']}}"
+          livenessProbe:
+            exec:
+              command:
+              - /openstack-kube/openstack-kube/scripts/monasca/storm-thresh_liveness
+            timeoutSeconds: 10
+            initialDelaySeconds: 90
+          readinessProbe:
+            exec:
+              command:
+              - /openstack-kube/openstack-kube/scripts/monasca/storm-thresh_readiness
+            timeoutSeconds: 30
+            initialDelaySeconds: 60

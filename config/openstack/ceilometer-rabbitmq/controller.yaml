@@ -1,0 +1,87 @@
+kind: ReplicationController
+apiVersion: v1
+
+metadata:
+  name: ceilometer-rabbitmq
+  namespace: ceilometer
+  labels:
+    system: openstack
+    component: metering
+
+spec:
+  replicas: 1
+#  selector:
+#    name: ceilometer-rabbitmq
+  template:
+    metadata:
+      labels:
+        component: ceilometer-rabbitmq
+    spec:
+      nodeSelector:
+        zone: farm
+      volumes:
+        - name: ceilometer-rabbitmq-persistent-storage
+          persistentVolumeClaim:
+            claimName: ceilometer-rabbitmq-pvclaim
+#          emptyDir: {}
+        - name: openstack-kube
+          gitRepo:
+            repository: {{cluster_config['cluster.configuration.repository']}}
+            revision: {{cluster_config['cluster.configuration.revision']}}
+        - name: cluster-config
+          configMap:
+            name: cluster-config
+        - name: cluster-secret
+          secret:
+            secretName: cluster-secret
+        - name: ceilometer-bin
+          configMap:
+            name: ceilometer-bin
+        - name: ceilometer-etc
+          configMap:
+            name: ceilometer-etc
+      containers:
+        - name: ceilometer-rabbitmq
+          image: docker.mo.sap.corp/ceilometer/rabbitmq:buildtest
+#          image: hub.global.cloud.sap/monsoon/ubuntu-source-rabbitmq:stable-mitaka
+          imagePullPolicy: Always
+#          securityContext:
+#            privileged: true
+          command:
+            - /usr/local/bin/dumb-init
+          args:
+            - /openstack-kube/openstack-kube/scripts/ceilometer/rabbitmq_start
+#          command:
+#            - /bin/bash
+#          args:
+#            - -c
+#            - "while true; do sleep 1000; done"
+          ports:
+            - name: rabbitmq
+              containerPort: {{cluster_config['ceilometer.rabbitmq.port.public']}}
+            - name: rabbitmq-mgmt
+              containerPort: {{cluster_config['ceilometer.rabbitmq.port.mgmt']}}
+          volumeMounts:
+            - name: ceilometer-rabbitmq-persistent-storage
+              mountPath: /var/lib/rabbitmq
+              readOnly: false
+            - mountPath: /openstack-kube
+              name: openstack-kube
+            - mountPath: /cluster-config
+              name: cluster-config
+            - mountPath: /cluster-secret
+              name: cluster-secret
+            - mountPath: /ceilometer-bin
+              name: ceilometer-bin
+            - mountPath: /ceilometer-etc
+              name: ceilometer-etc
+          lifecycle:
+            preStop:
+              exec:
+                command: ["/openstack-kube/openstack-kube/scripts/ceilometer/rabbitmq_stop"]
+          livenessProbe:
+            exec:
+              command:
+              - /openstack-kube/openstack-kube/scripts/ceilometer/rabbitmq_liveness
+            timeoutSeconds: 30
+            initialDelaySeconds: 120

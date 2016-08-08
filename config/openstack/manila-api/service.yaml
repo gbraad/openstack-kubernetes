@@ -1,0 +1,16 @@
+kind: Service
+apiVersion: v1
+
+metadata:
+  name: manila-api
+  namespace: monsoon3
+  labels:
+    system: openstack
+    component: manila
+spec:
+  type: NodePort
+  selector:
+    name: manila-api
+  ports:
+    - name: manila-api
+      port: {{cluster_config['manila.api.port.internal']}}

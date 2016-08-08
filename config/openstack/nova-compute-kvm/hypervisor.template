@@ -1,0 +1,277 @@
+kind: Deployment
+apiVersion: extensions/v1beta1
+metadata:
+  name: {{component_config['name']}}
+  namespace: monsoon3
+  labels:
+    system: openstack
+    component: nova
+  annotations:
+    kubernetes.io/change-cause: {{cluster_config['cluster.deployment.reason']}}
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      name: {{component_config['name']}}
+  template:
+    metadata:
+      labels:
+        name: {{component_config['name']}}
+      annotations:
+        checksum/nova.etc: {{checksums['nova-etc-configmap.yaml']}}
+        checksum/nova.bin: {{checksums['nova-bin-configmap.yaml']}}
+        checksum/neutron.etc: {{checksums['neutron-etc-configmap.yaml']}}
+        checksum/neutron.bin: {{checksums['neutron-bin-configmap.yaml']}}
+
+        scheduler.alpha.kubernetes.io/affinity: >
+            {
+            "nodeAffinity": {
+              "requiredDuringSchedulingIgnoredDuringExecution": {
+                "nodeSelectorTerms": [
+                  {
+                    "matchExpressions": [
+                      {
+                        "key": "kubernetes.io/hostname",
+                        "operator": "In",
+                        "values": ["{{component_config['targetnode']}}"]
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+            }
+    spec:
+      hostNetwork: true
+      hostPID: true
+      hostIPC: true
+      containers:
+        - name: {{component_config['name']}}
+          image: {{cluster_config['cluster.image.repository']}}/{{cluster_config['cluster.image.namespace']}}/ubuntu-source-nova-compute-m3:{{cluster_config['image.version.nova.compute.m3']}}
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            privileged: true
+          command:
+            - /openstack-kube/openstack-kube/scripts/_container_init
+          args:
+            - nova-compute-start
+          livenessProbe:
+            exec:
+              command:
+              - /openstack-kube/openstack-kube/scripts/liveness-checks/nova/service-liveness-check
+              - --config-file=/etc/nova/nova.conf
+              - --config-file=/openstack-kube/openstack-kube/scripts/liveness-checks/nova/compute-liveness.conf
+            initialDelaySeconds: 30
+            timeoutSeconds: 10
+            periodSeconds: 30
+            failureThreshold: 2
+          volumeMounts:
+            - mountPath: /var/lib/nova/instances
+              name: instances
+            - mountPath: /var/lib/libvirt
+              name: libvirt
+            - mountPath: /lib/modules
+              name: modules
+              readOnly: true
+            - mountPath: /var/run
+              name: run
+            - mountPath: /openstack-kube
+              name: openstack-kube
+            - mountPath: /cluster-config
+              name: cluster-config
+            - mountPath: /cluster-secret
+              name: cluster-secret
+            - mountPath: /hypervisor-config
+              name: hypervisor-config
+            - mountPath: /nova-etc
+              name: nova-etc
+            - mountPath: /nova-patches
+              name: nova-patches
+
+            - mountPath: /container.init
+              name: nova-container-init
+        - name: nova-libvirt
+          image: {{cluster_config['cluster.image.repository']}}/{{cluster_config['cluster.image.namespace']}}/ubuntu-source-nova-libvirt:{{cluster_config['image.version.kolla.base']}}
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            privileged: true
+          command:
+            - /openstack-kube/openstack-kube/scripts/_container_init
+          args:
+            - nova-libvirt-start
+          volumeMounts:
+            - mountPath: /var/lib/nova/instances
+              name: instances
+            - mountPath: /var/lib/libvirt
+              name: libvirt
+            - mountPath: /var/run
+              name: run
+            - mountPath: /lib/modules
+              name: modules
+              readOnly: true
+            - mountPath: /openstack-kube
+              name: openstack-kube
+            - mountPath: /cluster-config
+              name: cluster-config
+            - mountPath: /cluster-secret
+              name: cluster-secret
+            - mountPath: /nova-etc
+              name: nova-etc
+            - mountPath: /container.init
+              name: nova-container-init
+        - name: nova-virtlog
+          image: {{cluster_config['cluster.image.repository']}}/{{cluster_config['cluster.image.namespace']}}/ubuntu-source-nova-libvirt:{{cluster_config['image.version.kolla.base']}}
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            privileged: true
+          command:
+            - /openstack-kube/openstack-kube/scripts/_container_init
+          args:
+            - nova-virtlog-start
+          volumeMounts:
+            - mountPath: /var/lib/nova/instances
+              name: instances
+            - mountPath: /var/lib/libvirt
+              name: libvirt
+            - mountPath: /var/run
+              name: run
+            - mountPath: /lib/modules
+              name: modules
+              readOnly: true
+            - mountPath: /openstack-kube
+              name: openstack-kube
+            - mountPath: /cluster-config
+              name: cluster-config
+            - mountPath: /cluster-secret
+              name: cluster-secret
+            - mountPath: /nova-etc
+              name: nova-etc
+            - mountPath: /container.init
+              name: nova-container-init
+
+        - name: neutron-ovs-agent
+          image: {{cluster_config['cluster.image.repository']}}/{{cluster_config['cluster.image.namespace']}}/ubuntu-source-neutron-openvswitch-agent:{{cluster_config['image.version.kolla.base']}}
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            privileged: true
+          command:
+            - /openstack-kube/openstack-kube/scripts/_container_init
+          args:
+            - neutron-ovs-agent-start
+          livenessProbe:
+            exec:
+              command:
+              - /openstack-kube/openstack-kube/scripts/liveness-checks/neutron/service-liveness-check
+              - --config-file=/etc/neutron/neutron.conf
+              - --config-file=/openstack-kube/openstack-kube/scripts/liveness-checks/neutron/ovs-agent-liveness.conf
+            initialDelaySeconds: 30
+            timeoutSeconds: 10
+            periodSeconds: 30
+            failureThreshold: 2
+          volumeMounts:
+            - mountPath: /var/run/
+              name: run
+            - mountPath: /lib/modules
+              name: modules
+              readOnly: true
+            - mountPath: /openstack-kube
+              name: openstack-kube
+            - mountPath: /cluster-config
+              name: cluster-config
+            - mountPath: /cluster-secret
+              name: cluster-secret
+            - mountPath: /neutron-etc
+              name: neutron-etc
+            - mountPath: /container.init
+              name: neutron-container-init
+        - name: ovs
+          image: {{cluster_config['cluster.image.repository']}}/{{cluster_config['cluster.image.namespace']}}/ubuntu-source-openvswitch-vswitchd:{{cluster_config['image.version.kolla.base']}}
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            privileged: true
+          command:
+            - /openstack-kube/openstack-kube/scripts/_container_init
+          args:
+            - neutron-ovs-start
+          volumeMounts:
+            - mountPath: /var/run/
+              name: run
+            - mountPath: /lib/modules
+              name: modules
+              readOnly: true
+            - mountPath: /openstack-kube
+              name: openstack-kube
+            - mountPath: /cluster-config
+              name: cluster-config
+            - mountPath: /cluster-secret
+              name: cluster-secret
+            - mountPath: /container.init
+              name: neutron-container-init
+        - name: ovs-db
+          image: {{cluster_config['cluster.image.repository']}}/{{cluster_config['cluster.image.namespace']}}/ubuntu-source-openvswitch-db-server:{{cluster_config['image.version.kolla.base']}}
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            privileged: true
+          command:
+            - /openstack-kube/openstack-kube/scripts/_container_init
+          args:
+            - neutron-ovs-db-start
+          volumeMounts:
+            - mountPath: /var/run/
+              name: run
+            - mountPath: /lib/modules
+              name: modules
+            - mountPath: /openstack-kube
+              name: openstack-kube
+            - mountPath: /cluster-config
+              name: cluster-config
+            - mountPath: /cluster-secret
+              name: cluster-secret
+            - mountPath: /container.init
+              name: neutron-container-init
+      volumes:
+        - name : instances
+          persistentVolumeClaim:
+            claimName: kvm-shared1-pvclaim
+        - name : libvirt
+          emptyDir:
+            medium: Memory
+        - name : run
+          emptyDir:
+            medium: Memory
+        - name : modules
+          hostPath:
+            path: /lib/modules
+        - name : cgroup
+          hostPath:
+            path: /sys/fs/cgroup
+        - name: openstack-kube
+          gitRepo:
+            repository: {{cluster_config['cluster.configuration.repository']}}
+            revision: {{cluster_config['cluster.configuration.revision']}}
+        - name: cluster-config
+          configMap:
+            name: cluster-config
+        - name: hypervisor-config
+          configMap:
+            name: {{component_config['config']}}
+        - name: cluster-secret
+          secret:
+            secretName: cluster-secret
+        - name: nova-etc
+          configMap:
+            name: nova-etc
+        - name: nova-patches
+          configMap:
+            name: nova-patches
+        - name: neutron-etc
+          configMap:
+            name: neutron-etc
+        - name: nova-container-init
+          configMap:
+            name: nova-bin
+        - name: neutron-container-init
+          configMap:
+            name: neutron-bin

@@ -1,0 +1,20 @@
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: elektra
+  namespace: elektra
+data:
+  rails.env: production
+  has.keystone.router: '1'
+  monsoon.dashboard.region: eu-de-1
+  monsoon.dashboard.landscape: production
+  monsoon.openstack.auth.api.endpoint: https://identity.eu-de-1.cloud.sap:5000/v3
+  monsoon.openstack.auth.api.userid: dashboard
+  monsoon.openstack.auth.api.domain: Default
+  swift.reselleradmin.role: swiftreseller
+  swift.reselleradmin.project: service
+  swift.reselleradmin.project.domain: Default
+  swift.reselleradmin.region: eu-de-1
+  arc.updates.url: https://stable.arc.eu-de-1.cloud.sap
+  arc.pki.url: https://arc-pki.eu-de-1.cloud.sap/api/v1/token
+  arc.broker.url: tls://arc-broker.eu-de-1.cloud.sap:8883

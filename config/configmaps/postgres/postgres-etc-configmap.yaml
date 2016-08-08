@@ -1,0 +1,12 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-etc
+  labels:
+    system: openstack
+    component: configuration
+
+data:
+  postgresql.conf: |
+    {{config['postgres/postgresql.conf']}}

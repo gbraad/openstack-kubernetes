@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: monasca-es-master
+  namespace: monasca
+  labels:
+    system: openstack
+    service: monitoring
+    component: elasticsearch-master
+spec:
+  selector:
+    component: elasticsearch-master
+  ports:
+  - name: transport
+    port: {{cluster_config['monasca.elasticsearch.port.cluster']}}

@@ -1,0 +1,13 @@
+kind: Service
+apiVersion: v1
+
+metadata:
+  name: pki 
+  namespace: arc
+
+spec:
+  type: ClusterIP 
+  selector:
+    name: pki 
+  ports: 
+    - port: 80 

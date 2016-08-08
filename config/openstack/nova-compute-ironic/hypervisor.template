@@ -1,0 +1,91 @@
+kind: Deployment
+apiVersion: extensions/v1beta1
+
+metadata:
+  name: {{component_config['name']}}
+  namespace: monsoon3
+  labels:
+    system: openstack
+    component: nova
+  annotations:
+    kubernetes.io/change-cause: {{cluster_config['cluster.deployment.reason']}}
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 3
+  selector:
+    matchLabels:
+        name: {{component_config['name']}}
+  template:
+    metadata:
+      labels:
+        name: {{component_config['name']}}
+      annotations:
+        pod.beta.kubernetes.io/hostname:  {{component_config['name']}}
+        checksum/nova.etc: {{checksums['nova-etc-configmap.yaml']}}
+        checksum/nova.bin: {{checksums['nova-bin-configmap.yaml']}}
+
+    spec:
+      nodeSelector:
+        zone: farm
+      containers:
+        - name: {{component_config['name']}}
+          image: {{cluster_config['cluster.image.repository']}}/{{cluster_config['cluster.image.namespace']}}/ubuntu-source-nova-compute-m3:{{cluster_config['image.version.nova.compute.m3']}}
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            privileged: true
+          command:
+            - /openstack-kube/openstack-kube/scripts/_container_init
+          args:
+            - nova-compute-start
+          livenessProbe:
+            exec:
+              command:
+              - /openstack-kube/openstack-kube/scripts/liveness-checks/nova/service-liveness-check
+              - --config-file=/etc/nova/nova.conf
+              - --config-file=/openstack-kube/openstack-kube/scripts/liveness-checks/nova/compute-liveness.conf
+            initialDelaySeconds: 30
+            timeoutSeconds: 10
+            periodSeconds: 30
+            failureThreshold: 2
+          volumeMounts:
+            - mountPath: /openstack-kube
+              name: openstack-kube
+            - mountPath: /cluster-config
+              name: cluster-config
+            - mountPath: /cluster-secret
+              name: cluster-secret
+            - mountPath: /hypervisor-config
+              name: hypervisor-config
+            - mountPath: /nova-etc
+              name: nova-etc
+            - mountPath: /nova-patches
+              name: nova-patches
+            - mountPath: /container.init
+              name: container-init
+      volumes:
+        - name: openstack-kube
+          gitRepo:
+            repository: {{cluster_config['cluster.configuration.repository']}}
+            revision: {{cluster_config['cluster.configuration.revision']}}
+        - name: cluster-config
+          configMap:
+            name: cluster-config
+        - name: cluster-secret
+          secret:
+            secretName: cluster-secret
+        - name: nova-etc
+          configMap:
+            name: nova-etc
+        - name: nova-patches
+          configMap:
+            name: nova-patches
+        - name: hypervisor-config
+          configMap:
+            name: {{component_config['config']}}
+        - name: container-init
+          configMap:
+            name: nova-bin

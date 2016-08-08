@@ -1,0 +1,16 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: neutron-patches
+  labels:
+    system: openstack
+    component: configuration
+
+data:
+  dhcp.diff: |
+    {{config['mitaka/neutron/dhcp.diff']}}
+  dns-integration.diff: |
+    {{config['mitaka/neutron/dns_integration.diff']}}
+
+

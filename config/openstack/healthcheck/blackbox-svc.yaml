@@ -1,0 +1,14 @@
+kind: Service
+apiVersion: v1
+
+metadata:
+  name: blackbox-metrics
+  namespace: monitoring
+  annotations:
+    "prometheus.io/scrape": "true"
+
+spec:
+  selector:
+    app: blackbox-metrics
+  ports:
+    - port: 9101

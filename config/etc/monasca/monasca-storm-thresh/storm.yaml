@@ -1,0 +1,47 @@
+### base
+java.library.path: "/usr/local/lib:/opt/local/lib:/usr/lib"
+storm.local.dir: "/var/storm"
+
+### zookeeper.*
+storm.zookeeper.servers: {{cluster_config['monasca_zookeeper_servers_yaml']}}
+storm.zookeeper.port: {{cluster_config['monasca_zookeeper_port_internal']}}
+storm.zookeeper.retry.interval: 5000
+storm.zookeeper.retry.times: 60
+storm.zookeeper.root: /storm
+storm.zookeeper.session.timeout: 3000
+
+### supervisor.* configs are for node supervisors
+supervisor.slots.ports:
+    - 6701
+supervisor.childopts: -Xmx512m
+
+### worker.* configs are for task workers
+worker.childopts: -Xmx512m -XX:+UseConcMarkSweepGC -Dcom.sun.management.jmxremote
+
+### nimbus.* configs are for the master
+nimbus.host: "localhost"
+nimbus.thrift.port: 6627
+nimbus.childopts: -Xmx512m
+
+### ui.* configs are for the master
+ui.port: 8088
+ui.childopts: -Xmx768m
+
+#log viewer
+logviewer.port: 8000
+logviewer.childopts: "-Xmx128m"
+logviewer.cleanup.age.mins: 10080
+logviewer.appender.name: "STDOUT"
+
+logs.users: null
+
+### drpc.* configs
+
+### transactional.* configs
+transactional.zookeeper.servers: {{cluster_config['monasca_zookeeper_servers_yaml']}}
+transactional.zookeeper.port: {{cluster_config['monasca_zookeeper_port_internal']}}
+transactional.zookeeper.root: /storm-transactional
+
+### topology.* configs are for specific executing storms
+topology.acker.executors: 1
+topology.debug: False

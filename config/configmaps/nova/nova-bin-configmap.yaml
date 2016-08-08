@@ -1,0 +1,32 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nova-bin
+  labels:
+    system: openstack
+    component: configuration
+
+data:
+  nova-api-start: |
+    {{config['nova/nova-api-start']}}
+  nova-compute-start: |
+    {{config['nova/nova-compute-start']}}
+  nova-conductor-start: |
+    {{config['nova/nova-conductor-start']}}
+  nova-consoleauth-start: |
+    {{config['nova/nova-consoleauth-start']}}
+  nova-libvirt-start: |
+    {{config['nova/nova-libvirt-start']}}
+  nova-novncproxy-start: |
+    {{config['nova/nova-novncproxy-start']}}
+  nova-scheduler-start: |
+    {{config['nova/nova-scheduler-start']}}
+  nova-spicehtml5proxy-start: |
+    {{config['nova/nova-spicehtml5proxy-start']}}
+  nova-virtlog-start: |
+    {{config['nova/nova-virtlog-start']}}
+  common.sh: |
+    {{config['common.sh']}}
+
+

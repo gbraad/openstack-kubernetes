@@ -1,0 +1,23 @@
+#!/bin/bash
+
+# Call this script to make sure that Zookeeper can be reached from within your container
+# nc does not use proxy, so no need to unset
+
+. /var/tmp/zookeeper-cluster_prereq.rc
+
+for zk_url in $(echo $MONASCA_ZOOKEEPER_CLUSTER_URLS | tr "," "\n"); do
+  zk=$(echo "$zk_url" | tr ":" "\n" | head -1)
+  resp=$(echo ruok | nc -w 5 $zk $MONASCA_ZOOKEEPER_PORT_INTERNAL)
+  echo $resp | grep -w -q imok
+  RC=$?
+  if [ $RC = 0 ]; then
+    break
+  else
+    echo "$(date --utc +'%Y-%m-%d %H:%M:%S.%3N') $$ ERROR $0 ZooKeeper $zk has issues: $resp"
+  fi
+done
+
+if [ $RC != 0 ]; then
+  echo "$(date --utc +'%Y-%m-%d %H:%M:%S.%3N') $$ ERROR $0 No ZooKeeper nodes could be reached"
+  exit $RC
+fi

@@ -1,0 +1,16 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rabbitmq-bin
+  labels:
+    system: openstack
+    component: configuration
+
+data:
+  rabbitmq-start: |
+    {{config['rabbitmq/rabbitmq-start']}}
+  common.sh: |
+    {{config['common.sh']}}
+
+

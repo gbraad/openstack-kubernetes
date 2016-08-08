@@ -1,0 +1,37 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: neutron-bin
+  labels:
+    system: openstack
+    component: configuration
+data:
+  neutron-aci-agent-start: |
+    {{config['neutron/neutron-aci-agent-start']}}
+  neutron-asr-start: |
+    {{config['neutron/neutron-asr-start']}}
+  neutron-dhcp-agent-start: |
+    {{config['neutron/neutron-dhcp-agent-start']}}
+  neutron-dvs-agent-start: |
+    {{config['neutron/neutron-dvs-agent-start']}}
+  neutron-f5-agent-start: |
+    {{config['neutron/neutron-f5-agent-start']}}
+  neutron-f5-ml2-agent-start: |
+    {{config['neutron/neutron-f5-agent-start']}}
+  neutron-l3-agent-start: |
+    {{config['neutron/neutron-l3-agent-start']}}
+  neutron-metadata-agent-start: |
+    {{config['neutron/neutron-metadata-agent-start']}}
+  neutron-ovs-agent-start: |
+    {{config['neutron/neutron-ovs-agent-start']}}
+  neutron-ovs-db-start: |
+    {{config['neutron/neutron-ovs-db-start']}}
+  neutron-ovs-start: |
+    {{config['neutron/neutron-ovs-start']}}
+  neutron-server-start: |
+    {{config['neutron/neutron-server-start']}}
+  common.sh: |
+    {{config['common.sh']}}
+
+

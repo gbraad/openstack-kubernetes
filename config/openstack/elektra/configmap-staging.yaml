@@ -1,0 +1,20 @@
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: elektra
+  namespace: elektra
+data:
+  rails.env: production
+  has.keystone.router: '1'
+  monsoon.dashboard.region: staging
+  monsoon.dashboard.landscape: staging
+  monsoon.openstack.auth.api.endpoint: https://identity.staging.cloud.sap:5000/v3
+  monsoon.openstack.auth.api.userid: dashboard
+  monsoon.openstack.auth.api.domain: Default
+  swift.reselleradmin.role: swiftreseller
+  swift.reselleradmin.project: service
+  swift.reselleradmin.project.domain: Default
+  swift.reselleradmin.region: staging
+  arc.updates.url: https://beta.arc.eu-de-1.cloud.sap
+  arc.pki.url: https://arc-pki.staging.cloud.sap/api/v1/token
+  arc.broker.url: tls://arc-broker.staging.cloud.sap:8883

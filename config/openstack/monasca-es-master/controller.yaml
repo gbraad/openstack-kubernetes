@@ -1,0 +1,112 @@
+apiVersion: v1
+kind: ReplicationController
+metadata:
+  name: monasca-es-master
+  namespace: monasca
+  labels:
+    system: openstack
+    service: monitoring
+    component: elasticsearch-master
+spec:
+  replicas: 3
+  template:
+    metadata:
+      labels:
+        component: elasticsearch-master
+    spec:
+      nodeSelector:
+        zone: farm
+      volumes:
+        - name: storage
+          emptyDir: {}
+        - name: openstack-kube
+          gitRepo:
+            repository: {{cluster_config['cluster.configuration.repository']}}
+            revision: {{cluster_config['cluster.configuration.revision']}}
+        - name: cluster-config
+          configMap:
+            name: cluster-config
+        - name: cluster-secret
+          secret:
+            secretName: cluster-secret
+      containers:
+      - name: monasca-es-master
+        securityContext:
+          capabilities:
+            add:
+              - IPC_LOCK
+        image: docker.mo.sap.corp/monasca/monasca-elasticsearch:latest
+        imagePullPolicy: Always
+        command:
+          - dumb-init
+        args:
+          - /openstack-kube/openstack-kube/scripts/monasca-elasticsearch_start
+        volumeMounts:
+#         - name: monasca-kafka-persistent-storage
+#           mountPath: /var/opt/kafka
+#           readOnly: false
+          - mountPath: /openstack-kube
+            name: openstack-kube
+          - mountPath: /cluster-config
+            name: cluster-config
+          - mountPath: /cluster-secret
+            name: cluster-secret
+          - mountPath: /data
+            name: storage
+        env:
+        - name: KUBERNETES_CA_CERTIFICATE_FILE
+          value: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+        - name: NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: "CLUSTER_NAME"
+          value: "monascaelasticsearch"
+        - name: NODE_MASTER
+          value: "true"
+        - name: NODE_DATA
+          value: "false"
+        - name: HTTP_ENABLE
+          value: "true"
+        ports:
+          - containerPort: {{cluster_config['monasca.elasticsearch.port.cluster']}}
+            name: transport
+            protocol: TCP
+          - name: dummymasterport
+            hostPort: {{cluster_config['monasca.elasticsearch.master.dummy.port']}} 
+            containerPort: {{cluster_config['monasca.elasticsearch.master.dummy.port']}} 
+      - name: monasca-agent-forwarder
+        image: docker.mo.sap.corp/monasca/monasca-agent:latest
+        imagePullPolicy: Always
+        command:
+          - dumb-init
+        args:
+          - /openstack-kube/openstack-kube/scripts/monasca/agent-forwarder_start
+        ports:
+          - containerPort:  {{cluster_config['monasca.agent.port.forwarder']}}
+        volumeMounts:
+          - mountPath: /openstack-kube
+            name: openstack-kube
+          - mountPath: /cluster-config
+            name: cluster-config
+          - mountPath: /cluster-secret
+            name: cluster-secret
+      - name: monasca-agent-collector
+        image: docker.mo.sap.corp/monasca/monasca-agent:latest
+        imagePullPolicy: Always
+        command:
+          - dumb-init
+        args:
+          - /openstack-kube/openstack-kube/scripts/monasca/elasticsearch-agent-collector_start
+        volumeMounts:
+          - mountPath: /openstack-kube
+            name: openstack-kube
+          - mountPath: /cluster-config
+            name: cluster-config
+          - mountPath: /cluster-secret
+            name: cluster-secret
+        env:
+          - name: KUBE_NAMESPACE
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.namespace

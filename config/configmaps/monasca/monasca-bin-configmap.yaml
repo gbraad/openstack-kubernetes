@@ -1,0 +1,16 @@
+metadata:
+  name: monasca-bin
+  labels:
+    system: openstack
+    service: monitoring
+    component: configuration
+
+data:
+  api-start: |
+    {{config['monasca/api-start']}}
+  notification-start: |
+    {{config['monasca/notification-start']}}
+  common-start: |
+    {{config['monasca/common-start']}}
+  common.sh: |
+    {{config['common.sh']}}

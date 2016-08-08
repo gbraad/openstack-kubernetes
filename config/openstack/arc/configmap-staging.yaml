@@ -1,0 +1,15 @@
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: arc
+  namespace: arc
+data:
+  arc.keystone.endpoint: https://identity.staging.cloud.sap:5000/v3
+  arc.log.level: debug
+  updates.swift.auth-url: https://identity.eu-de-1.cloud.sap:5000/v3
+  updates.swift.username: arc_swift 
+  updates.swift.domain.name: monsooncc 
+  updates.swift.project.id: p-7496766f1 
+  updates.swift.container: arc-releases-beta
+
+

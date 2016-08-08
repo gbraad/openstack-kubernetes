@@ -1,0 +1,26 @@
+#!/bin/bash
+
+. /container.init/common.sh
+
+function process_config {
+
+  cp /monasca-fluent-fluent-conf/fluent.conf /etc/fluent
+
+}
+
+function start_application {
+
+  unset http_proxy https_proxy all_proxy no_proxy
+  export http_proxy=
+  export https_proxy=
+  export all_proxy=
+  export no_proxy=
+
+  #/usr/local/bin/fluentd --use-v1-config --suppress-repeated-stacktrace 
+  /usr/local/bin/fluentd --use-v1-config
+
+}
+
+process_config
+
+start_application

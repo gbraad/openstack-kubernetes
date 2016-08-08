@@ -1,0 +1,40 @@
+kind: ReplicationController
+apiVersion: v1
+
+metadata:
+  name: blackbox-datapath
+  namespace: monitoring
+  labels:
+    app: blackbox-datapath
+
+spec:
+  replicas: 1
+  selector:
+    app: blackbox-datapath
+  template:
+    metadata:
+      labels:
+        app: blackbox-datapath
+    spec:
+      nodeSelector:
+        zone: farm
+      containers:
+        - name: datapath
+          image: docker.mo.sap.corp/monsoon-docker/blackbox-healthcheck:latest
+          ports:
+            - containerPort: 9101
+          args:
+            - -web.listen-address=0.0.0.0:9101
+            - -namespace=datapath
+            - checks/datapath/*
+          env:
+            - name: VMWARE_FLOATING_IP
+              valueFrom:
+                configMapKeyRef:
+                  name: blackbox-datapath
+                  key: monsoon.datapath.vmdk.floatip
+            - name: KVM_FLOATING_IP
+              valueFrom:
+                configMapKeyRef:
+                  name: blackbox-datapath
+                  key: monsoon.datapath.kvm.floatip

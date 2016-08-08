@@ -1,0 +1,41 @@
+kind: ReplicationController
+apiVersion: v1
+
+metadata:
+  name: postgres
+  namespace: lyra
+
+spec:
+  replicas: 1
+  selector:
+    name: postgres
+  template:
+    metadata:
+      labels:
+        name: postgres
+    spec:
+      volumes:
+        - name: postgres-persistent-storage
+          persistentVolumeClaim:
+            claimName: postgres
+      nodeSelector:
+        zone: farm
+      containers:
+        - name: postgres
+          image: docker.mo.sap.corp/monsoon/postgres:9.5
+          env:
+            - name: PGDATA
+              value: /postgresql/data
+            - name: POSTGRES_DB
+              value: monsoon-automation_production
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: lyra
+                  key: monsoon.db.password
+          ports:
+            - name: postgres
+              containerPort: 5432
+          volumeMounts:
+            - name: postgres-persistent-storage
+              mountPath: /postgresql

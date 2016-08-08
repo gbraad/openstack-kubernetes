@@ -1,0 +1,18 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: keystone-bin
+  labels:
+    system: openstack
+    component: configuration
+
+data:
+  keystone-seed: |
+    {{config['keystone/keystone-seed']}}
+  keystone-start: |
+    {{config['keystone/keystone-start']}}
+  common.sh: |
+    {{config['common.sh']}}
+
+

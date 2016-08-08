@@ -1,0 +1,13 @@
+#!/bin/bash
+
+THRESH_PID=$(cat /var/tmp/monasca-thresh.pid)
+NIMBUS_PID=$(cat /var/tmp/storm-nimbus.pid)
+
+if ! kill -0 $THRESH_PID; then
+  echo "Thresholder process died; exiting"
+  exit 1
+fi
+if ! kill -0 $NIMBUS_PID; then
+  echo "Nimbus process died (despite supervisor being up); exiting"
+  exit 1
+fi

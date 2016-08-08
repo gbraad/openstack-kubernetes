@@ -1,0 +1,99 @@
+kind: Deployment
+apiVersion: extensions/v1beta1
+
+metadata:
+  name: cinder-api
+  namespace: monsoon3
+  labels:
+    system: openstack
+    component: cinder
+  annotations:
+    kubernetes.io/change-cause: {{cluster_config['cluster.deployment.reason']}}
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 3
+  selector:
+    matchLabels:
+      name: cinder-api
+  template:
+    metadata:
+      labels:
+        name: cinder-api
+      annotations:
+          checksum/cinder.etc: {{checksums['cinder-etc-configmap.yaml']}}
+          checksum/cinder.bin: {{checksums['cinder-etc-configmap.yaml']}}
+    spec:
+      nodeSelector:
+        zone: farm
+      containers:
+        - name: cinder-api
+          image: {{cluster_config['cluster.image.repository']}}/{{cluster_config['cluster.image.namespace']}}/ubuntu-source-cinder-api-m3:{{cluster_config['image.version.cinder.api.m3']}}
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            privileged: true
+          command:
+            - /openstack-kube/openstack-kube/scripts/_container_init
+          args:
+            - cinder-api-start
+          env:
+            - name: DEBUG_CONTAINER
+              value: "false"
+            - name: STATSD_HOST
+              value: "localhost"
+            - name: STATSD_PORT
+              value: "9125"
+            - name: SENTRY_DSN
+              valueFrom:
+                configMapKeyRef:
+                  name: cluster-config
+                  key: cinder.sentry.dsn
+          livenessProbe:
+            httpGet:
+              path: /
+              port: {{cluster_config['cinder.api.port.internal']}}
+            initialDelaySeconds: 15
+            timeoutSeconds: 5
+          ports:
+            - name: cinder-api
+              containerPort: {{cluster_config['cinder.api.port.internal']}}
+          volumeMounts:
+            - mountPath: /openstack-kube
+              name: openstack-kube
+            - mountPath: /cinder-etc
+              name: cinder-etc
+            - mountPath: /cluster-config
+              name: cluster-config
+            - mountPath: /cluster-secret
+              name: cluster-secret
+            - mountPath: /container.init
+              name: container-init
+        - name: statsd
+          image: prom/statsd-exporter
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: statsd
+              containerPort: 9125
+              protocol: UDP
+            - name: metrics
+              containerPort: {{cluster_config['cinder.port.metrics']}}
+      volumes:
+        - name: openstack-kube
+          gitRepo:
+            repository: {{cluster_config['cluster.configuration.repository']}}
+            revision: {{cluster_config['cluster.configuration.revision']}}
+        - name: cluster-config
+          configMap:
+            name: cluster-config
+        - name: cinder-etc
+          configMap:
+            name: cinder-etc
+        - name: cluster-secret
+          secret:
+            secretName: cluster-secret
+        - name: container-init
+          configMap:
+            name: cinder-bin

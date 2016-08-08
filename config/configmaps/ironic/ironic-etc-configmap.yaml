@@ -1,0 +1,12 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ironic-etc
+  labels:
+    system: openstack
+    component: configuration
+
+data:
+  ironic.conf: |
+    {{config['ironic/ironic.conf']}}

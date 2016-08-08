@@ -1,0 +1,14 @@
+kind: Service
+apiVersion: v1
+
+metadata:
+  name: documentation
+  namespace: documentation
+
+spec:
+  type: NodePort
+  selector:
+    name: documentation
+  ports:
+    - port: 80
+      nodePort: 31103

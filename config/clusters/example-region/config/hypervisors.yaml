@@ -1,0 +1,16 @@
+hypervisors:
+  - name: nova-compute-vmware
+    config: hypervisor-vmware
+    template: nova-compute-vmware
+    spec_type: deployment.yaml
+    ml2_config: ml2-vmware-ini
+  - name: nova-compute-minion1
+    targetnode: minion1.example-region.sap
+    config: hypervisor-kvm
+    template: nova-compute-kvm
+    spec_type: deployment.yaml
+  - name: nova-compute-ironic
+    config: hypervisor-ironic
+    template: nova-compute-ironic
+    spec_type: deployment.yaml
+

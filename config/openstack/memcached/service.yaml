@@ -1,0 +1,19 @@
+kind: Service
+apiVersion: v1
+
+metadata:
+  name: memcached
+  namespace: monsoon3
+  labels:
+    system: openstack
+    component: cache
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "{{cluster_config['memcache.port.metrics']}}"
+spec:
+  type: NodePort
+  selector:
+    name: memcached
+  ports:
+    - name: memcache
+      port: {{cluster_config['memcache.port.public']}}

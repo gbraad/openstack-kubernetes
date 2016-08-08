@@ -1,0 +1,5 @@
+#!/bin/bash
+
+echo "Safely shutting down Zookeeper"
+echo "* sending SIGTERM to Zookeeper process"
+kill -SIGTERM $(pgrep --full "java -Dzookeeper")

@@ -1,0 +1,19 @@
+apiVersion: extensions/v1beta1
+kind: Ingress
+
+metadata:
+  name: horizon
+  namespace: monsoon3
+
+spec:
+  tls:
+     - secretName: tls-{{cluster_config['horizon.endpoint.host'].replace(".","-")}}
+       hosts: [{{cluster_config['horizon.endpoint.host']}}]
+  rules:
+    - host: {{cluster_config['horizon.endpoint.host']}}
+      http:
+        paths:
+        - path: /
+          backend:
+            serviceName: horizon
+            servicePort: {{cluster_config['horizon.port.http']}}

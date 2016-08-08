@@ -1,0 +1,32 @@
+#!/bin/bash
+
+# set some env variables from the openstack env properly based on env
+. /monasca-common-start/common-start
+
+function process_config {
+
+  echo "nothing to be done for process_config"
+
+}
+
+function start_application {
+
+  set -e
+
+  export STDOUT_LOC=${STDOUT_LOC:-/proc/1/fd/1}  
+  export STDERR_LOC=${STDERR_LOC:-/proc/1/fd/2}
+
+  #set logstash schema on every startup
+  curl -u ${MONASCA_ELASTICSEARCH_USER}:${MONASCA_ELASTICSEARCH_PASSWORD} -XPUT "http://${MONASCA_ELASTICSEARCH_ENDPOINT_HOST_INTERNAL}:9200/_template/logstash" -d "@/openstack-kube/openstack-kube/etc/monasca-wall-e/logstash.schema.json"
+
+  curl -u ${MONASCA_ELASTICSEARCH_USER}:${MONASCA_ELASTICSEARCH_PASSWORD} -XPUT "http://${MONASCA_ELASTICSEARCH_ENDPOINT_HOST_INTERNAL}:9200/_cluster/settings" -d '{"transient": { "discovery.zen.minimum_master_nodes": 2 }}'
+
+  cat <(crontab -l) <(echo "0 6 * * * /openstack-kube/openstack-kube/etc/monasca-wall-e/elasticsearch-retention.sh > ${STDOUT_LOC} 2> ${STDERR_LOC}") | crontab -
+
+  cron -f 
+
+}
+
+process_config
+
+start_application

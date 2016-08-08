@@ -1,0 +1,18 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: glance-bin
+  labels:
+    system: openstack
+    component: configuration
+
+data:
+  glance-api-start: |
+    {{config['glance/glance-api-start']}}
+  glance-registry-start: |
+    {{config['glance/glance-registry-start']}}
+  common.sh: |
+    {{config['common.sh']}}
+
+

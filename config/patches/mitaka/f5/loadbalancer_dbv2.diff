@@ -1,0 +1,18 @@
+--- loadbalancer_dbv2.orig.py	2016-08-08 09:40:52.000000000 +0100
++++ loadbalancer_dbv2.patch.py	2016-08-08 09:42:31.000000000 +0100
+@@ -55,9 +55,12 @@
+         resource = None
+         try:
+             if for_update:
+-                query = self._model_query(context, model).filter(
+-                    model.id == id).with_lockmode('update')
+-                resource = query.one()
++                # http://www.postgresql.org/message-id/21634.1160151923@sss.pgh.pa.us
++                #query = self._model_query(context, model).filter(
++                #    model.id == id).with_lockmode('update')
++                #resource = query.one()
++
++                resource = self._get_by_id(context, model, id)
+             else:
+                 resource = self._get_by_id(context, model, id)
+         except exc.NoResultFound:

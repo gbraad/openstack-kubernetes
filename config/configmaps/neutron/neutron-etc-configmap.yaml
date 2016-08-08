@@ -1,0 +1,45 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: neutron-etc
+  labels:
+    system: openstack
+    component: configuration
+
+data:
+  cisco-cfg-agent.ini: |
+    {{config['neutron/cisco-cfg-agent.ini']}}
+  cisco-device-manager-plugin.ini: |
+    {{config['neutron/cisco-device-manager-plugin.ini']}}
+  cisco-router-plugin.ini: |
+    {{config['neutron/cisco-router-plugin.ini']}}
+  dhcp-agent.ini: |
+    {{config['neutron/dhcp-agent.ini']}}
+  dnsmasq.conf: |
+    {{config['neutron/dnsmasq.conf']}}
+  f5-oslbaasv2-agent.ini: |
+    {{config['neutron/f5-oslbaasv2-agent.ini']}}
+  l3-agent.ini: |
+    {{config['neutron/l3-agent.ini']}}
+  metadata-agent.ini: |
+    {{config['neutron/metadata-agent.ini']}}
+  ml2-conf.ini: |
+    {{config['neutron/ml2-conf.ini']}}
+  ml2-conf-arista.ini: |
+    {{config['neutron/ml2-conf-arista.ini']}}
+  ml2-conf-asr.ini: |
+    {{config['neutron/ml2-conf-asr.ini']}}
+  ml2-conf-f5.ini: |
+    {{config['neutron/ml2-conf-asr.ini']}}
+  ml2-conf-manila.ini: |
+    {{config['neutron/ml2-conf-manila.ini']}}
+  ml2-conf-aci.ini: |
+    {{config['neutron/ml2-conf-aci.ini']}}
+  neutron.conf: |
+    {{config['neutron/neutron.conf']}}
+  neutron-lbaas.conf: |
+    {{config['neutron/neutron-lbaas.conf']}}
+  neutron-policy.json: |
+    {{config['neutron/neutron-policy.json']}}
+

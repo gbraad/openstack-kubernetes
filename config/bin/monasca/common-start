@@ -1,0 +1,46 @@
+#!/bin/bash
+
+# set some env variables from the openstack env properly based on env
+. /container.init/common.sh
+
+# on Ubuntu, python does not recognize the system certificate bundle
+export OS_CACERT=/etc/ssl/certs/ca-certificates.crt
+export OS_AUTH_URL="${KEYSTONE_API_ENDPOINT_PROTOCOL_INTERNAL}://${KEYSTONE_API_ENDPOINT_HOST_INTERNAL}:${KEYSTONE_API_PORT_INTERNAL}/v3"
+
+unset HTTP_PROXY HTTPS_PROXY http_proxy https_proxy no_proxy all_proxy
+
+# this is required to make things work in the docker env
+if [ "$MYDOCKER" != "" ]; then
+  KEYSTONE_API_ENDPOINT_HOST_INTERNAL=$KEYSTONE_SERVICE_HOST
+else
+  # unset all proxy settings
+  # get K8S environment
+  echo -n "Extract K8S metadata into env ..."
+  KUBE_NAMESPACE=monasca
+  KUBE_TOKEN=$(</var/run/secrets/kubernetes.io/serviceaccount/token)
+  export KUBE_POD_NAME=$HOSTNAME
+  curl -sSk -H "Authorization: Bearer $KUBE_TOKEN" https://$KUBERNETES_SERVICE_HOST:$KUBERNETES_PORT_443_TCP_PORT/api/v1/namespaces/$KUBE_NAMESPACE/pods/$KUBE_POD_NAME > /pod.json
+  export KUBE_POD_UID=$(jq -r ".metadata.uid" < /pod.json)
+  export KUBE_NODE_IP=$(jq -r ".status.hostIP" < /pod.json)
+  export KUBE_RC_NAME=$(jq -r '.metadata.annotations["kubernetes.io/created-by"]' < /pod.json | jq -r '.reference|select(.kind="ReplicationController").name')
+  curl -sSk -H "Authorization: Bearer $KUBE_TOKEN" https://$KUBERNETES_SERVICE_HOST:$KUBERNETES_PORT_443_TCP_PORT/api/v1/namespaces/$KUBE_NAMESPACE/replicationcontrollers/$KUBE_RC_NAME > /rc.json
+  export KUBE_RC_UID=$(jq -r ".metadata.uid" < /rc.json)
+  echo "ok"
+fi
+
+# TODO: read this from K8S
+# Kafka
+export MONASCA_KAFKA_SERVER_1="monasca-kafka-1.monasca.svc.kubernetes.${CLUSTER_REGION}.cloud.sap"
+export MONASCA_KAFKA_SERVER_2="monasca-kafka-2.monasca.svc.kubernetes.${CLUSTER_REGION}.cloud.sap"
+export MONASCA_KAFKA_SERVER_3="monasca-kafka-3.monasca.svc.kubernetes.${CLUSTER_REGION}.cloud.sap"
+export MONASCA_KAFKA_CLUSTER_URLS="${MONASCA_KAFKA_SERVER_1}:${MONASCA_KAFKA_PORT_INTERNAL},${MONASCA_KAFKA_SERVER_2}:${MONASCA_KAFKA_PORT_INTERNAL},${MONASCA_KAFKA_SERVER_3}:${MONASCA_KAFKA_PORT_INTERNAL}"
+
+# Zookeeper
+export MONASCA_ZOOKEEPER_SERVER_1="monasca-zookeeper-1.monasca.svc.kubernetes.${CLUSTER_REGION}.cloud.sap"
+export MONASCA_ZOOKEEPER_SERVER_2="monasca-zookeeper-2.monasca.svc.kubernetes.${CLUSTER_REGION}.cloud.sap"
+export MONASCA_ZOOKEEPER_SERVER_3="monasca-zookeeper-3.monasca.svc.kubernetes.${CLUSTER_REGION}.cloud.sap"
+
+export MONASCA_ZOOKEEPER_CLUSTER_URLS="${MONASCA_ZOOKEEPER_SERVER_1}:${MONASCA_ZOOKEEPER_PORT_INTERNAL},${MONASCA_ZOOKEEPER_SERVER_2}:${MONASCA_ZOOKEEPER_PORT_INTERNAL},${MONASCA_ZOOKEEPER_SERVER_3}:${MONASCA_ZOOKEEPER_PORT_INTERNAL}"
+
+# write ENV for zookeeper-cluster_prereq.rc
+env | grep "ZOOKEEPER" > /var/tmp/zookeeper-cluster_prereq.rc

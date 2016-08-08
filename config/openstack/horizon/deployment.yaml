@@ -1,0 +1,75 @@
+kind: Deployment
+apiVersion: extensions/v1beta1
+
+metadata:
+  name: horizon
+  namespace: monsoon3
+  labels:
+    system: openstack
+    component: horizon
+  annotations:
+    kubernetes.io/change-cause: {{cluster_config['cluster.deployment.reason']}}
+spec:
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 3
+  selector:
+    matchLabels:
+      name: horizon
+  template:
+    metadata:
+      labels:
+        name: horizon
+      annotations:
+        checksum/horizon.etc: {{checksums['horizon-etc-configmap.yaml']}}
+        checksum/horizon.bin: {{checksums['horizon-bin-configmap.yaml']}}
+
+    spec:
+      nodeSelector:
+        zone: farm
+      containers:
+        - name: horizon
+          image: {{cluster_config['cluster.image.repository']}}/{{cluster_config['cluster.image.namespace']}}/ubuntu-source-horizon-m3:{{cluster_config['image.version.horizon.m3']}}
+          imagePullPolicy: IfNotPresent
+          command:
+            - /openstack-kube/openstack-kube/scripts/_container_init
+          args:
+            - horizon-start
+          env:
+            - name: DEBUG_CONTAINER
+              value: "false"
+          ports:
+            - name: http
+              containerPort: {{cluster_config['horizon.port.http']}}
+          volumeMounts:
+            - mountPath: /openstack-kube
+              name: openstack-kube
+            - mountPath: /horizon-etc
+              name: horizon-etc
+            - mountPath: /cluster-config
+              name: cluster-config
+            - mountPath: /cluster-secret
+              name: cluster-secret
+            - mountPath: /container.init
+              name: container-init
+      volumes:
+        - name: openstack-kube
+          gitRepo:
+            repository: {{cluster_config['cluster.configuration.repository']}}
+            revision: {{cluster_config['cluster.configuration.revision']}}
+        - name: horizon-etc
+          configMap:
+            name: horizon-etc
+        - name: cluster-config
+          configMap:
+            name: cluster-config
+        - name: cluster-secret
+          secret:
+            secretName: cluster-secret
+        - name: container-init
+          configMap:
+            name: horizon-bin
+

@@ -1,0 +1,12 @@
+kind: Service
+apiVersion: v1
+
+metadata:
+  name: updates
+
+spec:
+  type: ClusterIP 
+  selector:
+    name: updates
+  ports: 
+    - port: 80 

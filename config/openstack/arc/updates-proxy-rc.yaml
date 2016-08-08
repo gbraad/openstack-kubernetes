@@ -1,0 +1,44 @@
+kind: ReplicationController
+apiVersion: v1
+
+metadata:
+  name: updates-proxy
+
+spec:
+  replicas: 2
+  selector:
+    name: updates-proxy
+  template:
+    metadata:
+      labels:
+        name: updates-proxy
+    spec:
+      nodeSelector:
+        zone: farm
+      volumes:
+        - name: nginx-config 
+          configMap:
+            name: updates-proxy 
+      containers:
+        - name: proxy 
+          image: nginx:1.11-alpine 
+          volumeMounts:
+            - name: nginx-config
+              mountPath: /etc/nginx/conf.d
+          ports:
+            - name: proxy 
+              containerPort: 80
+          readinessProbe:
+            httpGet:
+              # Path to probe; should be cheap, but representative of typical behavior
+              path: /
+              port: 80 
+            initialDelaySeconds: 5 
+            timeoutSeconds: 1
+          livenessProbe:
+            httpGet:
+              # Path to probe; should be cheap, but representative of typical behavior
+              path: /
+              port: 80 
+            initialDelaySeconds: 20
+            timeoutSeconds: 1

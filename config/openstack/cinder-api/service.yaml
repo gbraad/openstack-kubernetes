@@ -1,0 +1,19 @@
+kind: Service
+apiVersion: v1
+
+metadata:
+  name: cinder-api
+  namespace: monsoon3
+  labels:
+    system: openstack
+    component: cinder
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "{{cluster_config['cinder.port.metrics']}}"
+spec:
+  type: NodePort
+  selector:
+    name: cinder-api
+  ports:
+    - name: cinder-api
+      port: {{cluster_config['cinder.api.port.internal']}}

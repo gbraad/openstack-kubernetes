@@ -1,0 +1,86 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: designate-mariadb
+  namespace: monsoon3
+  labels:
+    system: openstack
+    component: designate
+  annotations:
+    kubernetes.io/change-cause: {{cluster_config['cluster.deployment.reason']}}
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: designate-mariadb
+  template:
+    metadata:
+      labels:
+        app: designate-mariadb
+      annotations:
+        checksum/mariadb.etc: {{checksums['mariadb-etc-configmap.yaml']}}
+
+    spec:
+      nodeSelector:
+        zone: farm
+      containers:
+      - name: designate-mariadb
+        image: sapcc/mariadb
+#        command: ["/bin/sh","-c"]
+#        args: ["sleep 100000000"]
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: cluster-secret
+              key: designate.db.password
+        - name: DESIGNATE_DB_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: cluster-config
+              key: designate.db.name
+        - name: DESIGNATE_POOLMANAGER_DB_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: cluster-config
+              key: designate.poolmanager.db.name
+        ports:
+          - name: mariadb
+            containerPort: 3306
+        volumeMounts:
+          - name: designate-mariadb-persistent-storage
+            mountPath: /var/lib/mysql
+            readOnly: false
+          - mountPath: /openstack-kube
+            name: openstack-kube
+          - mountPath: /cluster-config
+            name: mariadb-etc
+          - mountPath: /mysql-cnf
+            name: cluster-config
+          - mountPath: /cluster-secret
+            name: cluster-secret
+          - name: db-init
+            mountPath: /dbinit
+      volumes:
+        - name: designate-mariadb-persistent-storage
+          persistentVolumeClaim:
+           claimName: db-designate-pvclaim
+        - name: db-init
+          configMap:
+            name: db-init-designate
+        - name: mariadb-etc
+          configMap:
+            name: mariadb-etc
+        - name: openstack-kube
+          gitRepo:
+            repository: {{cluster_config['cluster.configuration.repository']}}
+            revision: {{cluster_config['cluster.configuration.revision']}}
+        - name: cluster-config
+          configMap:
+            name: cluster-config
+        - name: cluster-secret
+          secret:
+            secretName: cluster-secret
+

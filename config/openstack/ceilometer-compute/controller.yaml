@@ -1,0 +1,65 @@
+kind: ReplicationController
+apiVersion: v1
+
+metadata:
+  name: ceilometer-compute
+  namespace: ceilometer
+  labels:
+    system: openstack
+    component: metering
+
+spec:
+  replicas: 1
+#  selector:
+#    name: ceilometer-compute
+  template:
+    metadata:
+      labels:
+        component: ceilometer-compute
+    spec:
+      nodeSelector:
+        zone: farm
+      volumes:
+        - name: openstack-kube
+          gitRepo:
+            repository: {{cluster_config['cluster.configuration.repository']}}
+            revision: {{cluster_config['cluster.configuration.revision']}}
+        - name: cluster-config
+          configMap:
+            name: cluster-config
+        - name: cluster-secret
+          secret:
+            secretName: cluster-secret
+        - name: ceilometer-bin
+          configMap:
+            name: ceilometer-bin
+        - name: ceilometer-etc
+          configMap:
+            name: ceilometer-etc
+      containers:
+        - name: ceilometer-compute
+          image: docker.mo.sap.corp/ceilometer/ceilometer-compute:buildtest
+#          image: hub.global.cloud.sap/monsoon/ubuntu-source-ceilometer-compute:stable-mitaka
+          imagePullPolicy: Always
+#          securityContext:
+#            privileged: true
+          command:
+            - /usr/local/bin/dumb-init
+          args:
+            - /openstack-kube/openstack-kube/scripts/ceilometer/compute_start
+#          command:
+#            - /bin/bash
+#          args:
+#            - -c
+#            - "while true; do sleep 1000; done"
+          volumeMounts:
+            - mountPath: /openstack-kube
+              name: openstack-kube
+            - mountPath: /cluster-config
+              name: cluster-config
+            - mountPath: /cluster-secret
+              name: cluster-secret
+            - mountPath: /ceilometer-bin
+              name: ceilometer-bin
+            - mountPath: /ceilometer-etc
+              name: ceilometer-etc

@@ -1,0 +1,34 @@
+kind: ReplicationController
+apiVersion: v1
+
+metadata:
+  name: mosquitto 
+  namespace: arc
+
+spec:
+  replicas: 1
+  selector:
+    name: mosquitto
+  template:
+    metadata:
+      labels:
+        name: mosquitto
+    spec:
+      nodeSelector:
+        zone: farm
+      volumes:
+        - name: mosquitto-secret 
+          secret:
+            secretName: mosquitto
+      containers:
+        - name: mosquitto
+          imagePullPolicy: Always
+          image: docker.mo.sap.corp/monsoon/mosquitto
+          command: [mosquitto, -c, /secrets/mosquitto/mosquitto.conf]
+          ports:
+            - name: mqtt
+              containerPort: 8883
+          volumeMounts:
+            - name: mosquitto-secret
+              mountPath: /secrets/mosquitto 
+              readOnly: true

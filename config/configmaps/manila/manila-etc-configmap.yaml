@@ -1,0 +1,12 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: manila-etc
+  labels:
+    system: openstack
+    component: configuration
+
+data:
+  manila.conf: |
+    {{config['manila/manila.conf']}}

@@ -1,0 +1,139 @@
+kind: Deployment
+apiVersion: extensions/v1beta1
+
+metadata:
+  name: postgres-keystone
+  namespace: monsoon3
+  labels:
+    system: openstack
+    component: keystone
+  annotations:
+    kubernetes.io/change-cause: {{cluster_config['cluster.deployment.reason']}}
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      name: postgres-keystone
+  template:
+    metadata:
+      labels:
+        name: postgres-keystone
+      annotations:
+        checksum/postgres.etc: {{checksums['postgres-etc-configmap.yaml']}}
+        checksum/postgres.bin: {{checksums['postgres-bin-configmap.yaml']}}
+
+    spec:
+      hostPID: true
+      nodeSelector:
+        zone: farm
+      volumes:
+        - name: postgres-persistent-storage
+          #emptyDir: {}
+          persistentVolumeClaim:
+            claimName: db-keystone-pvclaim
+        - name: db-init
+          configMap:
+            name: db-init-keystone
+        - name: openstack-kube
+          gitRepo:
+            repository: {{cluster_config['cluster.configuration.repository']}}
+            revision: {{cluster_config['cluster.configuration.revision']}}
+        - name: cluster-config
+          configMap:
+            name: cluster-config
+        - name: cluster-secret
+          secret:
+            secretName: cluster-secret
+        - name: postgres-etc
+          configMap:
+            name: postgres-etc
+        - name: container-init
+          configMap:
+            name: postgres-bin
+
+      containers:
+        - name: postgres
+          image: hub.global.cloud.sap/monsoon/postgres:9.4
+          imagePullPolicy: Always
+          livenessProbe:
+            exec:
+              command:
+              - pg_isready
+              - -h
+              - localhost
+              - -p
+              - "{{cluster_config['postgres.port.private']}}"
+              - -U
+              - postgres
+            initialDelaySeconds: 20
+            timeoutSeconds: 5
+          env:
+            - name: PGDATA
+              value: /postgresql-data/data/
+          ports:
+            - name: postgres
+              containerPort: {{cluster_config['postgres.port.private']}}
+          volumeMounts:
+            - mountPath: /openstack-kube
+              name: openstack-kube
+            - mountPath: /cluster-config
+              name: cluster-config
+            - mountPath: /cluster-secret
+              name: cluster-secret
+            - name: postgres-persistent-storage
+              mountPath: /postgresql-data
+            - name: db-init
+              mountPath: /docker-entrypoint-initdb.d
+            - name: postgres-etc
+              mountPath: /postgresql-conf
+        - name: pgbouncer
+          command: ["/openstack-kube/openstack-kube/scripts/_container_init"]
+          args:
+            - pgbouncer-start
+          livenessProbe:
+            exec:
+              command:
+              - psql
+              - -h
+              - localhost
+              - -p
+              - "{{cluster_config['postgres.port.public']}}"
+              - -c
+              - "SELECT 1;"
+              - {{cluster_config['keystone.db.name']}}
+              - {{cluster_config['keystone.db.user']}}
+          image: hub.global.cloud.sap/monsoon/pgbouncer-k8s:latest
+          volumeMounts:
+            - mountPath: /openstack-kube
+              name: openstack-kube
+            - mountPath: /cluster-config
+              name: cluster-config
+            - mountPath: /cluster-secret
+              name: cluster-secret
+            - mountPath: /container.init
+              name: container-init
+          ports:
+            - name: pgbouncer
+              containerPort: {{cluster_config['postgres.port.public']}}
+          env:
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: cluster-secret
+                  key: postgres.password
+        - name: metrics
+          image: wrouesnel/postgres_exporter
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: cluster-secret
+                  key: postgres.password
+            - name: DATA_SOURCE_NAME
+              value: "postgresql://{{cluster_config['postgres.user']}}:$POSTGRES_PASSWORD@localhost:{{cluster_config['postgres.port.private']}}/{{cluster_config['keystone.db.name']}}?sslmode=disable"
+          ports:
+            - name: metrics
+              containerPort: {{cluster_config['postgres.port.metrics']}}

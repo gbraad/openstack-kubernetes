@@ -1,0 +1,68 @@
+# Generated from elektra-rc.yaml.erb. Do not modify manually!
+# Edit elektra-rc.yaml.erb and run 'make' instead.
+
+kind: ReplicationController
+apiVersion: v1
+
+metadata:
+  name: elektra 
+  namespace: elektra 
+
+spec:
+  replicas: 2
+  selector:
+    name: elektra 
+  template:
+    metadata:
+      labels:
+        name: elektra 
+    spec:
+      nodeSelector:
+        zone: farm
+      containers:
+        - name: rails
+          image: docker.mo.sap.corp/monsoon/monsoon-dashboard:build.latest
+          ports:
+            - name: http
+              containerPort: 80 
+          env:
+            - name: RAILS_ENV
+              valueFrom: { configMapKeyRef: { name: elektra, key: rails.env } }
+            - name: MONSOON_DASHBOARD_REGION
+              valueFrom: { configMapKeyRef: { name: elektra, key: monsoon.dashboard.region } }
+            - name: MONSOON_DASHBOARD_LANDSCAPE
+              valueFrom: { configMapKeyRef: { name: elektra, key: monsoon.dashboard.landscape } }
+            - name: MONSOON_OPENSTACK_AUTH_API_ENDPOINT
+              valueFrom: { configMapKeyRef: { name: elektra, key: monsoon.openstack.auth.api.endpoint } }
+            - name: MONSOON_OPENSTACK_AUTH_API_USERID
+              valueFrom: { configMapKeyRef: { name: elektra, key: monsoon.openstack.auth.api.userid } }
+            - name: MONSOON_OPENSTACK_AUTH_API_DOMAIN
+              valueFrom: { configMapKeyRef: { name: elektra, key: monsoon.openstack.auth.api.domain } }
+            - name: SWIFT_RESELLERADMIN_ROLE
+              valueFrom: { configMapKeyRef: { name: elektra, key: swift.reselleradmin.role } }
+            - name: SWIFT_RESELLERADMIN_PROJECT
+              valueFrom: { configMapKeyRef: { name: elektra, key: swift.reselleradmin.project } }
+            - name: SWIFT_RESELLERADMIN_PROJECT_DOMAIN
+              valueFrom: { configMapKeyRef: { name: elektra, key: swift.reselleradmin.project.domain } }
+            - name: SWIFT_RESELLERADMIN_REGION
+              valueFrom: { configMapKeyRef: { name: elektra, key: swift.reselleradmin.region } }
+            - name: ARC_UPDATES_URL
+              valueFrom: { configMapKeyRef: { name: elektra, key: arc.updates.url } }
+            - name: ARC_PKI_URL
+              valueFrom: { configMapKeyRef: { name: elektra, key: arc.pki.url } }
+            - name: ARC_BROKER_URL
+              valueFrom: { configMapKeyRef: { name: elektra, key: arc.broker.url } }
+            - name: MONSOON_DB_PASSWORD
+              valueFrom: { secretKeyRef:    { name: elektra, key: monsoon.db.password } }
+            - name: MONSOON_OPENSTACK_AUTH_API_PASSWORD
+              valueFrom: { secretKeyRef:    { name: elektra, key: monsoon.openstack.auth.api.password } }
+            - name: MONSOON_RAILS_SECRET_TOKEN
+              valueFrom: { secretKeyRef:    { name: elektra, key: monsoon.rails.secret.token } }
+            - name: SENTRY_DSN
+              valueFrom: { secretKeyRef:    { name: elektra, key: sentry.dsn } }
+          livenessProbe:
+            httpGet:
+              path: /system/health
+              port: 80
+            timeoutSeconds: 120
+            initialDelaySeconds: 30 

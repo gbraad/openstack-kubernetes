@@ -1,0 +1,6 @@
+#!/bin/bash
+
+. /openstack-kube/openstack-kube/scripts/monasca/common_start 
+
+echo "Start storm UI"
+/opt/storm/current/bin/storm ui

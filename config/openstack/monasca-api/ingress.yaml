@@ -1,0 +1,21 @@
+apiVersion: extensions/v1beta1
+kind: Ingress
+
+metadata:
+  name: monasca-api
+  namespace: monasca
+
+spec:
+  tls:
+#     - secretName: monasca-api
+     - secretName: tls-{{cluster_config['monasca.api.endpoint.host.public'].replace(".","-")}}
+       hosts: [{{cluster_config['monasca.api.endpoint.host.public']}}]
+  rules:
+    - host: {{cluster_config['monasca.api.endpoint.host.public']}}
+      http:
+        paths:
+        - path: /
+          backend:
+            serviceName: monasca-api
+            servicePort: {{cluster_config['monasca.api.port.internal']}}
+

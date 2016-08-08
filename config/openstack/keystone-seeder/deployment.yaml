@@ -1,0 +1,76 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+
+metadata:
+  name: keystone-seeder
+  namespace: monsoon3
+  labels:
+    system: openstack
+    component: keystone
+  annotations:
+    kubernetes.io/change-cause: {{cluster_config['cluster.deployment.reason']}}
+spec:
+  replicas: 1
+  minReadySeconds: 5
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 3
+  selector:
+    matchLabels:
+      name: keystone-seeder
+  template:
+    metadata:
+      labels:
+        name: keystone-seeder
+      annotations:
+        checksum/keystone.etc: {{checksums['keystone-etc-configmap.yaml']}}
+        checksum/keystone.bin: {{checksums['keystone-bin-configmap.yaml']}}
+    spec:
+      nodeSelector:
+        zone: farm
+      containers:
+        - name: keystone-seeder
+          image: {{cluster_config['cluster.image.repository']}}/{{cluster_config['cluster.image.namespace']}}/ubuntu-source-keystone-m3:{{cluster_config['image.version.keystone.m3']}}
+          imagePullPolicy: IfNotPresent
+          command:
+            - /openstack-kube/openstack-kube/scripts/_container_init
+          args:
+            - keystone-seed
+          volumeMounts:
+            - mountPath: /keystone-etc
+              name: keystone-etc
+            - mountPath: /openstack-kube
+              name: openstack-kube
+            - mountPath: /cluster-config
+              name: cluster-config
+            - mountPath: /cluster-secret
+              name: cluster-secret
+            - mountPath: /keystone-config
+              name: keystone-config
+            - mountPath: /container.init
+              name: container-init
+      volumes:
+        - name: openstack-kube
+          gitRepo:
+            repository: {{cluster_config['cluster.configuration.repository']}}
+            revision: {{cluster_config['cluster.configuration.revision']}}
+        - name: keystone-etc
+          configMap:
+            name: keystone-etc
+        - name: cluster-config
+          configMap:
+            name: cluster-config
+        - name: cluster-secret
+          secret:
+            secretName: cluster-secret
+        - name: keystone-config
+          configMap:
+            name: keystone-seed
+            items:
+              - key: keystone-seed.yaml
+                path: keystone-seed.yaml
+        - name: container-init
+          configMap:
+            name: keystone-bin

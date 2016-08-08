@@ -1,0 +1,19 @@
+kind: Service
+apiVersion: v1
+
+metadata:
+  name: neutron-server
+  namespace: monsoon3
+  labels:
+    system: openstack
+    component: neutron
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "{{cluster_config['neutron.port.metrics']}}"
+spec:
+  type: NodePort
+  selector:
+    name: neutron-server
+  ports:
+    - name: neutron-server
+      port: {{cluster_config['neutron.api.port.internal']}}

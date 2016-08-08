@@ -1,0 +1,10 @@
+neutron.agents:
+  - name: neutron-agents-network0
+    targetnode: network0.example-region.sap
+    template: neutron-agent
+    spec_type: deployment.yaml
+  - name: neutron-agents-network1
+    targetnode: network1.example-region.sap
+    template: neutron-agent
+    spec_type: deployment.yaml
+

@@ -1,0 +1,17 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: monasca-influxdb
+  namespace: monasca
+  labels:
+    system: openstack
+    service: monitoring
+spec:
+  ports:
+    - name: influxdb
+      port: {{cluster_config['monasca.influxdb.port.public']}}
+    - name: influxdbadmin
+      port: {{cluster_config['monasca.influxdb.port.admin']}}
+  selector:
+    component: monasca-influxdb
+

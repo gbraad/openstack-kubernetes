@@ -1,0 +1,16 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: keystone-etc
+  labels:
+    system: openstack
+    component: configuration
+
+data:
+  keystone.conf: |
+    {{config['keystone/keystone.conf']}}
+  policyv3.json: |
+    {{config['keystone/keystone-policyv3.json']}}
+  wsgi-keystone.conf: |
+    {{config['keystone/wsgi-keystone.conf']}}

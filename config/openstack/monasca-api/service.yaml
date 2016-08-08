@@ -1,0 +1,16 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: monasca-api
+  namespace: monasca
+  labels:
+    system: openstack
+    service: monitoring
+spec:
+  selector:
+    component: monasca-api
+  ports:
+    - name: api
+      port: {{cluster_config['monasca.api.port.internal']}}
+    - name: apiadmin
+      port: {{cluster_config['monasca.api.port.admin']}}

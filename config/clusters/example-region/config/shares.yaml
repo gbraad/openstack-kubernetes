@@ -1,0 +1,5 @@
+shares:
+  - name: manila-share-netapp
+    config: share-netapp
+    template: manila-share
+    spec_type: deployment.yaml

@@ -1,0 +1,21 @@
+--- vif.orig.py	2016-08-08 09:27:41.000000000 +0100
++++ vif.patch.py	2016-08-08 09:27:41.000000000 +0100
+@@ -132,7 +132,17 @@
+                        'network-type': network_type,
+                        'use-external-id': use_external_id}
+     elif vif['type'] == model.VIF_TYPE_DVS:
+-        network_id = vif['network']['bridge']
++        #****************************************
++        #
++        # Get port group from config to support DVS driver
++        #
++        #
++        #****************************************
++
++        #network_id = vif['network']['bridge']
++
++        network_id = (CONF.vmware.integration_bridge or "br-int")
++
+         network_ref = network_util.get_network_with_the_name(
+                 session, network_id, cluster)
+         if not network_ref:

@@ -1,0 +1,17 @@
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: operations
+  namespace: documentation
+spec:
+  tls:
+     - secretName: operations
+       hosts: [operations.staging.cloud.sap]
+  rules:
+  - host: operations.staging.cloud.sap
+    http:
+      paths:
+      - path: /
+        backend:
+          serviceName: operations
+          servicePort: 80

@@ -1,0 +1,14 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nova-etc
+  labels:
+    system: openstack
+    component: configuration
+
+data:
+  nova.conf: |
+    {{config['nova/nova.conf']}}
+  libvirtd.conf: |
+    {{config['nova/libvirt.conf']}}

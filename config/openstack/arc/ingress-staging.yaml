@@ -1,0 +1,38 @@
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: arc 
+  namespace: arc 
+spec:
+  tls:
+     - secretName: arc 
+       hosts: [arc.staging.cloud.sap, arc-staging.eu-de-1.cc.mo.sap.corp, arc-pki.staging.cloud.sap, arc-updates.staging.cloud.sap]
+  rules:
+  - host: arc.staging.cloud.sap 
+    http:
+      paths:
+      - path: /
+        backend:
+          serviceName: api 
+          servicePort: 80 
+  - host: arc-staging.eu-de-1.cc.mo.sap.corp 
+    http:
+      paths:
+      - path: /
+        backend:
+          serviceName: api 
+          servicePort: 80 
+  - host: arc-pki.staging.cloud.sap 
+    http:
+      paths:
+      - path: /
+        backend:
+          serviceName: pki 
+          servicePort: 80 
+  - host: arc-updates.staging.cloud.sap 
+    http:
+      paths:
+      - path: /
+        backend:
+          serviceName: updates 
+          servicePort: 80 

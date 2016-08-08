@@ -1,0 +1,31 @@
+apiVersion: extensions/v1beta1
+kind: Ingress
+
+metadata:
+  name: keystone
+  namespace: monsoon3
+  labels:
+    system: openstack
+    component: keystone
+spec:
+  tls:
+     - secretName: tls-{{cluster_config['keystone.api.endpoint.host.public'].replace(".","-")}}
+       hosts: [{{cluster_config['keystone.api.endpoint.host.public']}}]
+     - secretName: tls-{{cluster_config['keystone.api.endpoint.host.admin.ext'].replace(".","-")}}
+       hosts: [{{cluster_config['keystone.api.endpoint.host.admin.ext']}}]
+
+  rules:
+    - host: {{cluster_config['keystone.api.endpoint.host.public']}}
+      http:
+        paths:
+        - path: /
+          backend:
+            serviceName: keystone
+            servicePort: {{cluster_config['keystone.api.port.internal']}}
+    - host: {{cluster_config['keystone.api.endpoint.host.admin.ext']}}
+      http:
+        paths:
+        - path: /
+          backend:
+            serviceName: keystone
+            servicePort: {{cluster_config['keystone.api.port.admin']}}

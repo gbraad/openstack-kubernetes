@@ -1,0 +1,26 @@
+#!/bin/bash
+
+# set some env variables from the openstack env properly based on env
+. /monasca-common-start/common-start
+
+# copy our template
+cp -fr ${CLUSTER_CONFIG_PATH}/monasca-agent/* /etc/monasca/agent/
+
+# replace placeholders with actual values
+sed "s|{args.username}|$MONASCA_AGENT_USERNAME|" -i /etc/monasca/agent/agent.yaml
+sed "s|{args.password}|$MONASCA_AGENT_PASSWORD|" -i /etc/monasca/agent/agent.yaml
+sed "s|{args.monasca_url}|${MONASCA_API_ENDPOINT_PROTOCOL_INTERNAL}://${MONASCA_API_ENDPOINT_HOST_INTERNAL}:${MONASCA_API_PORT_INTERNAL}/v2.0|" -i /etc/monasca/agent/agent.yaml
+sed "s|{args.keystone_url}|${KEYSTONE_API_ENDPOINT_PROTOCOL_INTERNAL}://${KEYSTONE_API_ENDPOINT_HOST_INTERNAL}:${KEYSTONE_API_PORT_INTERNAL}/v3|" -i /etc/monasca/agent/agent.yaml
+sed "s|{args.user_domain_name}|$MONASCA_AGENT_USER_DOMAIN_NAME|" -i /etc/monasca/agent/agent.yaml
+sed "s|{args.project_name}|$MONASCA_ADMIN_PROJECT|" -i /etc/monasca/agent/agent.yaml
+sed "s|{args.project_domain_name}|$MONASCA_ADMIN_DOMAIN_NAME|" -i /etc/monasca/agent/agent.yaml
+sed "s|{args.ca_file}|${OS_CACERT}|" -i /etc/monasca/agent/agent.yaml
+sed "s|{hostname}|$KUBE_NODE_IP|" -i /etc/monasca/agent/agent.yaml
+sed "s|{service}|monitoring|" -i /etc/monasca/agent/agent.yaml
+sed "s|{component}|monasca-agent|" -i /etc/monasca/agent/agent.yaml
+sed "s|{kube_rc_name}|$KUBE_RC_NAME|" -i /etc/monasca/agent/agent.yaml
+sed "s|{kube_pod_name}|$KUBE_POD_NAME|" -i /etc/monasca/agent/agent.yaml
+# user mon-agent is created in Dockerfile
+mkdir -p /var/log/monasca/agent
+
+# start scripts will continue here ...

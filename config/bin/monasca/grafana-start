@@ -1,0 +1,40 @@
+#!/bin/bash
+
+# set some env variables from the openstack env properly based on env
+. /monasca-common-start/common-start
+
+function process_config {
+
+  cp /monasca-monasca-grafana-ini/monasca-grafana.ini /opt/grafana/
+
+}
+
+function start_application {
+
+  # setup monasca agent after the process is up
+  #(sleep 60; /openstack-kube/openstack-kube/scripts/monasca/cfg-monasca-agent.sh ) &
+
+  # setup the datasources and dashboards if the setup script exists
+  # wait a moment until grafana is up and write to stdout and logfile in parallel
+  if [ -x /opt/grafana/datasources-dashboards.sh ]; then
+    (while netstat -lnt | awk '$4 ~ /:3000$/ {exit 1}'; do sleep 5; done; /opt/grafana/datasources-dashboards.sh ) 2>&1 | tee /opt/grafana/datasources-dashboards.log &
+  fi
+
+  if [ -f /var/lib/grafana/grafana.db ]; then
+    echo "creating a backup of the grafana db at /var/lib/grafana/backup/grafana.db.`date +%Y%m%d%H%M%S`"
+    mkdir -p /var/lib/grafana/backup
+    cp /var/lib/grafana/grafana.db /var/lib/grafana/backup/grafana.db.`date +%Y%m%d%H%M%S`
+    # keep only the last 20 backups to avoid the disk running over
+    for i in `ls -tr /var/lib/grafana/backup/* | head -n -20`; do rm $i; done
+  fi
+
+  cd /opt/grafana
+  # strange log config to get no file logging according to https://github.com/grafana/grafana/issues/5018
+  echo "Starting Grafana with lock /var/lib/grafana/.lock"
+  chpst -L /var/lib/grafana/.lock ./grafana -config monasca-grafana.ini cfg:default.log.mode=console
+
+}
+
+process_config
+
+start_application

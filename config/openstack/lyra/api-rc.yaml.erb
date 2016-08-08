@@ -1,0 +1,41 @@
+kind: ReplicationController
+apiVersion: v1
+
+metadata:
+  name: api 
+  namespace: lyra
+
+spec:
+  replicas: 1
+  selector:
+    name: api
+  template:
+    metadata:
+      labels:
+        name: api 
+    spec:
+      nodeSelector:
+        zone: farm
+      containers:
+        - name: rails
+          image: docker.mo.sap.corp/monsoon/monsoon-automation:latest
+          env:
+            - name: PORT
+              value: '80'
+<%- @config_vars.each do |key| -%>
+            - name: <%= key %>
+              valueFrom: { configMapKeyRef: { name: <%= @config_map_name %>, key: <%= key.downcase.gsub(/_/, '.') %> } }
+<%- end -%>
+<%- @secret_vars.each do |key| -%>
+            - name: <%= key %>
+              valueFrom: { secretKeyRef:    { name: <%= @secret_name %>, key: <%= key.downcase.gsub(/_/, '.') %> } }
+<%- end -%>
+          ports:
+            - name: automation
+              containerPort: 80 
+          livenessProbe:
+            httpGet:
+              path: /healthcheck
+              port: 80 
+            timeoutSeconds: 60
+            initialDelaySeconds: 30 

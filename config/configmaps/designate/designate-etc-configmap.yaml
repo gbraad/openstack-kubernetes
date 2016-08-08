@@ -1,0 +1,16 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: designate-etc
+  labels:
+    system: openstack
+    component: configuration
+
+data:
+  designate.conf: |
+    {{config['designate/designate.conf']}}
+  rndc.key: |
+    {{config['designate/rndc.key']}}
+  pools.yaml: |
+    {{config['designate/designate-pools.conf']}}

@@ -1,0 +1,12 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: volume-netapp-bb99
+  labels:
+    system: openstack
+    component: configuration
+
+data:
+  volume.conf: |
+    {{config['cinder/volume-netapp-bb99.conf']}}

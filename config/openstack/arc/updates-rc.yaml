@@ -1,0 +1,51 @@
+kind: ReplicationController
+apiVersion: v1
+
+metadata:
+  name: updates
+
+spec:
+  replicas: 2
+  selector:
+    name: updates
+  template:
+    metadata:
+      labels:
+        name: updates
+    spec:
+      containers:
+        - name: update-site 
+          image: docker.mo.sap.corp/monsoon/arc-update-site
+          args: [update-site, swift]
+          env:
+            - name: BIND_ADDRESS
+              value: 0.0.0.0:80
+            - name: OS_AUTH_URL 
+              valueFrom: { configMapKeyRef: {name: arc, key: updates.swift.auth-url}}
+            - name: OS_USERNAME
+              valueFrom: { configMapKeyRef: {name: arc, key: updates.swift.username}}
+            - name: OS_USER_DOMAIN_NAME
+              valueFrom: { configMapKeyRef: {name: arc, key: updates.swift.domain.name}}
+            - name: OS_PROJECT_ID
+              valueFrom: { configMapKeyRef: {name: arc, key: updates.swift.project.id}}
+            - name: OS_CONTAINER
+              valueFrom: { configMapKeyRef: {name: arc, key: updates.swift.container}}
+            - name: OS_PASSWORD
+              valueFrom: { secretKeyRef:    {name: arc, key: updates.swift.password}}
+          ports:
+            - name: update-site 
+              containerPort: 80
+          readinessProbe:
+            httpGet:
+              # Path to probe; should be cheap, but representative of typical behavior
+              path: /readiness
+              port: 80 
+            initialDelaySeconds: 5 
+            timeoutSeconds: 1
+          livenessProbe:
+            httpGet:
+              # Path to probe; should be cheap, but representative of typical behavior
+              path: /healthcheck
+              port: 80 
+            initialDelaySeconds: 20
+            timeoutSeconds: 1

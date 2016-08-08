@@ -1,0 +1,3 @@
+#!/bin/bash
+
+curl -f http://monasca-influxdb:8086/ping >/dev/null

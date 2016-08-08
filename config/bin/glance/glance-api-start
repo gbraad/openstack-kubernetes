@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+
+. /container.init/common.sh
+
+function process_config {
+    cp /glance-etc/glance-api.conf  /etc/glance/glance-api.conf
+    cp /glance-etc/swift-store.conf /etc/glance/swift-store.conf
+
+}
+
+function bootstrap_db {
+
+    glance-manage db_sync
+}
+
+
+function _start_application {
+    #chown -R glance: /glance_store
+    exec  /var/lib/kolla/venv/bin/glance-api
+
+}
+
+
+process_config
+#bootstrap_db
+start_application
+
+

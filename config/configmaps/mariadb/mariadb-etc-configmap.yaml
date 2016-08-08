@@ -1,0 +1,12 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mariadb-etc
+  labels:
+    system: openstack
+    component: configuration
+
+data:
+  mysql.cnf: |
+    {{config['mariadb/mysql.cnf']}}

@@ -1,0 +1,26 @@
+#!/bin/bash
+
+# common initialization
+. /monasca-agent-start/agent-start
+
+# wait for forwarder to come up
+. /monasca-agent-forwarder-prereq/agent-forwarder-prereq
+
+function process_config {
+  echo "nothing to be done for process_config"
+}
+
+function start_application {
+
+  sed "s|hostname: .*$|hostname: monasca-collector-$HOSTNAME|" -i /etc/monasca/agent/agent.yaml
+
+  echo -e "init_config:\ninstances:\n-   url: http://127.0.0.1:9200\n    username: ${MONASCA_ELASTICSEARCH_USER}\n    password: ${MONASCA_ELASTICSEARCH_PASSWORD}\n    dimensions:\n     kube_rc: ${KUBE_RC_NAME}">/etc/monasca/agent/conf.d/elastic.yaml
+  echo -e "init_config:\ninstances:\n - name: elasticsearch\n   search_string: ['java']\n   detailed: true">/etc/monasca/agent/conf.d/process.yaml
+
+  /usr/share/python/monasca-agent/bin/monasca-collector foreground
+
+}
+
+process_config
+
+start_application

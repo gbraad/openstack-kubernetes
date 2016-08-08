@@ -1,0 +1,14 @@
+kind: Service
+apiVersion: v1
+
+metadata:
+  name: mosquitto 
+  namespace: arc
+
+spec:
+  type: ClusterIP 
+  selector:
+    name: mosquitto 
+  ports: 
+    - port: 8883 
+  externalIPs: [ 10.44.11.201 ]

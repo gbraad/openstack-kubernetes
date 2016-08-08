@@ -1,0 +1,49 @@
+kind: ReplicationController
+apiVersion: v1
+
+metadata:
+  name: pki 
+
+spec:
+  replicas: 1
+  selector:
+    name: pki 
+  template:
+    metadata:
+      labels:
+        name: pki 
+    spec:
+      nodeSelector:
+        zone: farm
+      volumes:
+        - name: secrets 
+          secret:
+            secretName: arc
+      containers:
+        - name: pki 
+          image: docker.mo.sap.corp/monsoon/arc-pki
+          env:
+            - name: LISTEN
+              value: 0.0.0.0:80
+            - name: DBUSER
+              value: postgres
+            - name: DBHOST
+              value: postgres
+            - name: DBPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: arc 
+                  key: arc.db.password  
+            - name: CA_CERT
+              value: /secrets/ca.cert
+            - name: CA_KEY
+              value: /secrets/ca.key
+            - name: ARC_ENV
+              value: production
+          ports:
+            - name: pki
+              containerPort: 80 
+          volumeMounts:
+            - name: secrets
+              mountPath: /secrets
+              readOnly: true

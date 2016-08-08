@@ -1,0 +1,83 @@
+kafka:
+    url: {{cluster_config['monasca_kafka_cluster_urls']}}  # or comma seperated list of multiple hosts
+    group: monasca-notification
+    alarm_topic: alarm-state-transitions
+    notification_topic: alarm-notifications
+    notification_retry_topic: retry-notifications
+    max_offset_lag: 600  # In seconds, undefined for none
+    periodic:
+        60: 60-seconds-notifications
+
+mysql:
+    host: monasca-mysql
+    user: notification
+    passwd: {{cluster_config['monasca_mysql_notification_password']}}
+    db: mon
+# A dictionary set according to the params defined in, http://dev.mysql.com/doc/refman/5.0/en/mysql-ssl-set.html
+#    ssl: {'ca': '/path/to/ca'}
+
+notification_types:
+    email:
+        server: mail.sap.corp
+        port: 25
+        user:
+        password:
+        timeout: 60
+        from_addr: noreply+monasca-{{cluster_config['monasca_landscape']}}@sap.corp
+
+    webhook:
+        timeout: 5
+
+    pagerduty:
+        timeout: 5
+        url: "https://events.pagerduty.com/generic/2010-04-15/create_event.json"
+
+processors:
+    alarm:
+        number: 2
+        ttl: 14400  # In seconds, undefined for none. Alarms older than this are not processed
+    notification:
+        number: 4
+
+retry:
+    interval: 30
+    max_attempts: 5
+
+queues:
+    alarms_size: 256
+    finished_size: 256
+    notifications_size: 256
+    sent_notifications_size: 50  # limiting this size reduces potential # of re-sent notifications after a failure
+
+zookeeper:
+    url: {{cluster_config['monasca_zookeeper_cluster_urls']}}  # or comma seperated list of multiple hosts
+    notification_path: /notification/alarms
+    notification_retry_path: /notification/retry
+
+logging: # Used in logging.dictConfig
+    version: 1
+    disable_existing_loggers: False
+    formatters:
+        default:
+            format: "%(asctime)s %(levelname)s %(name)s %(message)s"
+    handlers:
+        console:
+            class: logging.StreamHandler
+            formatter: default
+        file:
+            class : logging.handlers.RotatingFileHandler
+            filename: /var/log/monasca/notification.log
+            formatter: default
+            maxBytes: 10485760  # Rotate at file size ~10MB
+            backupCount: 5  # Keep 5 older logs around
+    loggers:
+        kazoo:
+            level: WARN
+        kafka:
+            level: WARN
+        statsd:
+            level: WARN
+    root:
+        handlers:
+            - console
+        level: WARN

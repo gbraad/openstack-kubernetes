@@ -1,0 +1,20 @@
+#!/bin/bash
+
+echo "Waiting for Forwarder to become available"
+
+TIMEOUT=60
+WAIT=0
+until nc -w 1 localhost 17123 2>/dev/null || [ $WAIT -eq $TIMEOUT ]; do
+  echo -n .
+  sleep 1
+  ((WAIT++)) || :
+done
+
+echo
+
+if [ $WAIT -eq $TIMEOUT ]; then
+  echo "Timeout while waiting for forwarder to become available"
+  exit 1
+else
+  echo 'ok'
+fi

@@ -1,0 +1,19 @@
+kind: Service
+apiVersion: v1
+
+metadata:
+  name: glance
+  namespace: monsoon3
+  labels:
+    system: openstack
+    component: glance
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "{{cluster_config['glance.port.metrics']}}"
+spec:
+  type: NodePort
+  selector:
+    name: glance
+  ports:
+    - name: public
+      port: {{cluster_config['glance.api.port.internal']}}

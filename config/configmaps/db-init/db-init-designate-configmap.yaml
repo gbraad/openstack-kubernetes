@@ -1,0 +1,30 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: db-init-designate
+  labels:
+    system: openstack
+    component: configuration
+
+data:
+  db-init.sh: |
+    #!/usr/bin/env bash
+
+    data_dir=/var/lib/mysql
+
+    if [[ ! -e $data_dir ]]
+    then
+      mkdir $data_dir
+    fi
+
+    cp /openstack-kube/openstack-kube/etc/mariadb/mysql.cnf  /etc/mysql/my.cnf
+
+
+    . /openstack-kube/openstack-kube/scripts/common
+
+    export TERM=dumb
+
+    mysql -u root --password=$DESIGNATE_DB_PASSWORD <<- EOSQL
+        CREATE DATABASE $DESIGNATE_DB_NAME CHARACTER SET utf8 COLLATE utf8_general_ci;
+        CREATE DATABASE $DESIGNATE_POOLMANAGER_DB_NAME CHARACTER SET utf8 COLLATE utf8_general_ci;

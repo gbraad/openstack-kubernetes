@@ -1,0 +1,6 @@
+#!/bin/bash
+
+# common initialization
+. /monasca-agent-start/agent_start
+
+/usr/share/python/monasca-agent/bin/monasca-forwarder

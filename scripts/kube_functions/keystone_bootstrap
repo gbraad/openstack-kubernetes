@@ -1,0 +1,5 @@
+keystone_bootstrap() {
+    get_pod_id keystone
+    echo "Bootstrapping keystone configuration via pod ${POD_ID}"
+    kubectl exec -ti  ${POD_ID} /openstack-kube/openstack-kube/scripts/bootstrap/keystone_bootstrap
+}

@@ -1,0 +1,17 @@
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: elektra 
+  namespace: elektra
+spec:
+  tls:
+     - secretName: ingress
+       hosts: [dashboard.staging.cloud.sap]
+  rules:
+  - host: dashboard.staging.cloud.sap 
+    http:
+      paths:
+      - path: /
+        backend:
+          serviceName: elektra 
+          servicePort: 80

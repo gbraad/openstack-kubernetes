@@ -1,0 +1,14 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cinder-etc
+  labels:
+    system: openstack
+    component: configuration
+
+data:
+  cinder.conf: |
+    {{config['cinder/cinder.conf']}}
+
+

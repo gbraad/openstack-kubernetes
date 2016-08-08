@@ -1,0 +1,54 @@
+#!/bin/bash
+
+# set some env variables from the openstack env properly based on env
+. /monasca-common-start/common-start
+
+# get the config monasca-api config file and replace with the secrets inside of it
+cp -f ${CLUSTER_CONFIG_PATH}/monasca-zookeeper-cluster/zoo.cfg /opt/zookeeper/conf
+cp -f ${CLUSTER_CONFIG_PATH}/monasca-zookeeper-cluster/log4j.properties /opt/zookeeper/conf
+
+# reused the stuff from https://github.com/digital-wonderland/docker-zookeeper/
+# Fail hard and fast
+set -eo pipefail
+
+ZOOKEEPER_ID=${ZOOKEEPER_ID:-1}
+echo "ZOOKEEPER_ID=$ZOOKEEPER_ID"
+
+# create the data and datalogs dirs, if we are on a fresh system, i.e. they do not yet exist
+chown -R zookeeper:zookeeper /var/lib/zookeeper
+if [ ! -d /var/lib/zookeeper/data ]; then
+  mkdir -p /var/lib/zookeeper/data
+fi
+
+if [ ! -d /var/lib/zookeeper/datalogs ]; then
+  mkdir -p /var/lib/zookeeper/datalogs
+fi
+
+echo $ZOOKEEPER_ID > /var/lib/zookeeper/data/myid
+
+for VAR in `env`
+do
+  if [[ $VAR =~ ^ZOOKEEPER_SERVER_[0-9]+= ]]; then
+    SERVER_ID=`echo "$VAR" | sed -r "s/ZOOKEEPER_SERVER_(.*)=.*/\1/"`
+#    SERVER_IP=`echo "$VAR" | sed 's/.*=//'`
+    if [ "${SERVER_ID}" = "${ZOOKEEPER_ID}" ]; then
+      echo "server.${SERVER_ID}=0.0.0.0:${MONASCA_ZOOKEEPER_PORT_FOLLOWER}:${MONASCA_ZOOKEEPER_PORT_LEADER}" >> /opt/zookeeper/conf/zoo.cfg
+      echo "server.${SERVER_ID}=0.0.0.0:${MONASCA_ZOOKEEPER_PORT_FOLLOWER}:${MONASCA_ZOOKEEPER_PORT_LEADER}"
+    else
+      echo "server.${SERVER_ID}=monasca-zookeeper-${SERVER_ID}.monasca.svc.kubernetes.${CLUSTER_REGION}.cloud.sap:${MONASCA_ZOOKEEPER_PORT_FOLLOWER}:${MONASCA_ZOOKEEPER_PORT_LEADER}" >> /opt/zookeeper/conf/zoo.cfg
+      echo "server.${SERVER_ID}=monasca-zookeeper-${SERVER_ID}.monasca.svc.kubernetes.${CLUSTER_REGION}.cloud.sap:${MONASCA_ZOOKEEPER_PORT_FOLLOWER}:${MONASCA_ZOOKEEPER_PORT_LEADER}"
+    fi
+  fi
+done
+
+# uncomment to debug
+#sleep 30000
+
+# setup monasca agent after the process is up
+(sleep 60; /openstack-kube/openstack-kube/scripts/monasca/cfg-monasca-agent.sh ) &
+
+echo "Clean-up outdated Zookeeper logs"
+java -cp /opt/zookeeper/zookeeper-3.4.8.jar:/opt/zookeeper/lib/slf4j-log4j12-1.6.1.jar:/opt/zookeeper/lib/slf4j-api-1.6.1.jar:/opt/zookeeper/lib/log4j-1.2.16.jar:/opt/zookeeper/conf org.apache.zookeeper.server.PurgeTxnLog /var/lib/zookeeper/datalogs /var/lib/zookeeper/data -n 3
+
+echo "Start Zookeeper with lock /var/lib/zookeeper/.lock"
+chpst -L /var/lib/zookeeper/.lock -u zookeeper /opt/zookeeper/bin/zkServer.sh start-foreground

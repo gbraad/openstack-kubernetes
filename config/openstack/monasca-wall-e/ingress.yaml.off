@@ -1,0 +1,21 @@
+apiVersion: extensions/v1beta1
+kind: Ingress
+
+metadata:
+  name: monasca-es-admin
+  namespace: monasca
+
+spec:
+  tls:
+#     - secretName: monasca-es-admin
+     - secretName: tls-{{cluster_config['monasca.api.endpoint.host.public'].replace(".","-")}}
+       hosts: [{{cluster_config['monasca.elasticsearch.host.admin']}}]
+  rules:
+    - host: {{cluster_config['monasca.elasticsearch.host.admin']}}
+      http:
+        paths:
+        - path: /
+          backend:
+            serviceName: monasca-es-admin
+            servicePort: {{cluster_config['monasca.elasticsearch.port.admin']}}
+

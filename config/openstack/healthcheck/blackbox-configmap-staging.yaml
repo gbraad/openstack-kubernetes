@@ -1,0 +1,16 @@
+kind: ConfigMap
+apiVersion: v1
+
+metadata:
+  name: blackbox-metrics
+  namespace: monitoring
+
+data:
+  monsoon.openstack.auth.url: https://identity-3.staging.cloud.sap/v3
+  monsoon.openstack.identity.api.version: "3"
+  monsoon.openstack.user.name: cctest_cluster_3_admin
+  monsoon.openstack.user.domain.name: cctest_cluster_3
+  monsoon.openstack.project.name: admin
+  monsoon.openstack.project.domain.name: cctest_cluster_3
+  monsoon.openstack.region: staging
+  monsoon.router.url: https://identity.staging.cloud.sap:5000/v3

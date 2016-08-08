@@ -1,0 +1,52 @@
+kind: ReplicationController
+apiVersion: v1
+
+metadata:
+  name: mongodb
+  namespace: monsoon3
+  labels:
+    system: openstack
+    component: database
+spec:
+  replicas: 1
+  selector:
+    name: mongodb
+  template:
+    metadata:
+      labels:
+        name: mongodb
+    spec:
+      nodeSelector:
+        zone: farm
+      volumes:
+        - name: mongodb-persistent-storage
+          persistentVolumeClaim:
+            claimName: mongodb-pvclaim
+        - name: openstack-kube
+          gitRepo:
+            repository: {{cluster_config['cluster.configuration.repository']}}
+            revision: {{cluster_config['cluster.configuration.revision']}}
+        - name: cluster-config
+          configMap:
+            name: cluster-config
+        - name: cluster-secret
+          secret:
+            secretName: cluster-secret
+      containers:
+        - name: mongodb
+          image: {{cluster_config['cluster.image.repository']}}/{{cluster_config['cluster.image.namespace']}}/ubuntu-source-mongodb:{{cluster_config['image.version.kolla.base']}}
+          imagePullPolicy: Always
+          command:
+            - /openstack-kube/openstack-kube/scripts/mongodb_start
+          ports:
+            - name: mongodb
+              containerPort: {{cluster_config['mongodb.port.public']}}
+          volumeMounts:
+            - mountPath: /openstack-kube
+              name: openstack-kube
+            - mountPath: /cluster-config
+              name: cluster-config
+            - mountPath: /cluster-secret
+              name: cluster-secret
+            - name: mongodb-persistent-storage
+              mountPath: /var/lib/mongodb

@@ -1,0 +1,69 @@
+#!/usr/bin/env python
+
+import sys
+import socket
+
+
+from keystoneauth1 import loading
+from keystoneauth1 import session
+from neutronclient.v2_0 import client
+from oslo_config import cfg
+
+
+keystone_opts = [
+    cfg.StrOpt('auth_url'),
+    cfg.StrOpt('username'),
+    cfg.StrOpt('password'),
+    cfg.StrOpt('project_name'),
+    cfg.StrOpt('project_domain_name'),
+    cfg.StrOpt('user_domain_name')
+
+]
+
+service_opts = [
+    cfg.StrOpt('binary'),
+    cfg.BoolOpt('prune'),
+    cfg.IntOpt('api_timeout'),
+]
+
+
+CONF = cfg.CONF
+
+CONF.register_opts(service_opts, "liveness")
+
+CONF.register_opts(keystone_opts, "keystone_authtoken")
+
+CONF(sys.argv[1:])
+
+loader = loading.get_plugin_loader('password')
+
+auth = loader.load_from_options(auth_url=CONF.keystone_authtoken.auth_url,
+                                 username=CONF.keystone_authtoken.username,
+                                 password=CONF.keystone_authtoken.password,
+                                 user_domain_name=CONF.keystone_authtoken.user_domain_name,
+                                 project_domain_name=CONF.keystone_authtoken.project_domain_name,
+                                 project_name=CONF.keystone_authtoken.project_name
+                                 )
+
+sess = session.Session(auth=auth)
+
+neutron = client.Client(session=sess,timeout=CONF.liveness.api_timeout )
+
+try:
+    agents = neutron.list_agents(binary=CONF.liveness.binary)
+except:
+    print "Service API execution failed"
+    exit(0)
+
+host = socket.gethostname()
+
+rtn_code = 1
+
+for agent in agents['agents']:
+    if agent['alive'] and (agent['host'] == host or agent['host'].startswith(host+":")) :
+        rtn_code = 0
+
+    elif not agent['alive'] and CONF.liveness.prune:
+        neutron.delete_agents(agent['id'])
+
+exit(rtn_code)

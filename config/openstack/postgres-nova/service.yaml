@@ -1,0 +1,21 @@
+kind: Service
+apiVersion: v1
+
+metadata:
+  name: postgres-nova
+  namespace: monsoon3
+  labels:
+    system: openstack
+    component: database
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "{{cluster_config['postgres.port.metrics']}}"
+
+spec:
+  type: NodePort
+  selector:
+    name: postgres-nova
+  ports: 
+    - name: public
+      port: {{cluster_config['postgres.port.public']}}
+      targetPort: pgbouncer

@@ -1,0 +1,38 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: db-init-nova
+  labels:
+    system: openstack
+    component: configuration
+
+data:
+  db-init.sh: |
+    #!/usr/bin/env bash
+
+    data_dir=/postgresql-data/data
+
+    if [[ ! -e $data_dir ]]
+    then
+      mkdir $data_dir
+    fi
+
+    cp /openstack-kube/openstack-kube/etc/postgres/postgresql.conf  $data_dir/postgresql.conf
+
+
+    . /openstack-kube/openstack-kube/scripts/common
+
+    export PGUSER=postgres
+    psql <<- EOSQL
+        CREATE DATABASE $NOVA_DB_NAME;
+        CREATE ROLE $NOVA_DB_USER WITH ENCRYPTED PASSWORD '$NOVA_DB_PASSWORD' LOGIN;
+        GRANT ALL PRIVILEGES ON DATABASE $NOVA_DB_NAME TO $NOVA_DB_USER;
+
+        CREATE DATABASE $NOVA_API_DB_NAME;
+        CREATE ROLE $NOVA_API_DB_USER WITH ENCRYPTED PASSWORD '$NOVA_API_DB_PASSWORD' LOGIN;
+        GRANT ALL PRIVILEGES ON DATABASE $NOVA_API_DB_NAME TO $NOVA_API_DB_USER;
+    EOSQL
+
+
+

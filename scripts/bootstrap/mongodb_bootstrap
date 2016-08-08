@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+
+OPENSTACK_KUBE_SCRIPT_PATH=${0%/*}
+. $OPENSTACK_KUBE_SCRIPT_PATH/../common
+
+
+echo "db = db.getSiblingDB('${CEILOMETER_DB_NAME}');db.addUser({user: '${CEILOMETER_DB_USER}',pwd: '${CEILOMETER_DB_PASSWORD}',roles: [ 'readWrite', 'dbAdmin' ]})" > /tmp/mongo_bootstrap.js
+
+n=1
+m=12
+
+echo "Preparing MongoDB for Celiometer"
+
+until [ $n -ge $m ]
+
+do
+    mongo --host localhost /tmp/mongo_bootstrap.js > /dev/null 2>&1   && break
+
+    echo "Attempt $n of $m waiting 10 seconds to retry"
+
+    sleep 10
+
+    n=$[$n+1]
+done
+
+echo "MongoDB setup completed successfully"
+
+rm  /tmp/mongo_bootstrap.js
+
+
+

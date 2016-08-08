@@ -1,0 +1,127 @@
+kind: Deployment
+apiVersion: extensions/v1beta1
+
+metadata:
+  name: glance
+  namespace: monsoon3
+  labels:
+    system: openstack
+    component: glance
+  annotations:
+    kubernetes.io/change-cause: {{cluster_config['cluster.deployment.reason']}}
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 3
+  selector:
+    matchLabels:
+      name: glance
+  template:
+    metadata:
+      labels:
+        name: glance
+      annotations:
+        checksum/glance.etc: {{checksums['glance-etc-configmap.yaml']}}
+        checksum/glance.bin: {{checksums['glance-bin-configmap.yaml']}}
+    spec:
+      nodeSelector:
+        zone: farm
+      containers:
+        - name: glance-api
+          image: {{cluster_config['cluster.image.repository']}}/{{cluster_config['cluster.image.namespace']}}/ubuntu-source-glance-api-m3:{{cluster_config['image.version.glance.api.m3']}}
+          imagePullPolicy: IfNotPresent
+          command:
+            - /openstack-kube/openstack-kube/scripts/_container_init
+          args:
+            - glance-api-start
+
+          livenessProbe:
+            httpGet:
+              path: /
+              port: {{cluster_config['glance.api.port.internal']}}
+            initialDelaySeconds: 15
+            timeoutSeconds: 5
+          env:
+            - name: DEBUG_CONTAINER
+              value: "false"
+            - name: STATSD_HOST
+              value: "localhost"
+            - name: STATSD_PORT
+              value: "9125"
+            - name: SENTRY_DSN
+              valueFrom:
+                configMapKeyRef:
+                  name: cluster-config
+                  key: glance.sentry.dsn
+          ports:
+            - name: api
+              containerPort: {{cluster_config['glance.api.port.internal']}}
+          volumeMounts:
+            - mountPath: /openstack-kube
+              name: openstack-kube
+            - mountPath: /glance-etc
+              name: glance-etc
+            - mountPath: /cluster-config
+              name: cluster-config
+            - mountPath: /cluster-secret
+              name: cluster-secret
+            - mountPath: /glance_store
+              name: image-store
+            - mountPath: /container.init
+              name: glance-bin
+        - name: glance-registry
+          image: {{cluster_config['cluster.image.repository']}}/{{cluster_config['cluster.image.namespace']}}/ubuntu-source-glance-registry:{{cluster_config['image.version.kolla.base']}}
+          imagePullPolicy: IfNotPresent
+          command:
+            - /openstack-kube/openstack-kube/scripts/_container_init
+          args:
+            - glance-registry-start
+          env:
+            - name: DEBUG_CONTAINER
+              value: "false"
+          ports:
+            - name: registry
+              containerPort: 9191
+          volumeMounts:
+            - mountPath: /openstack-kube
+              name: openstack-kube
+            - mountPath: /glance-etc
+              name: glance-etc
+            - mountPath: /cluster-config
+              name: cluster-config
+            - mountPath: /cluster-secret
+              name: cluster-secret
+            - mountPath: /container.init
+              name: glance-bin
+        - name: statsd
+          image: prom/statsd-exporter
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: statsd
+              containerPort: 9125
+              protocol: UDP
+            - name: metrics
+              containerPort: {{cluster_config['glance.port.metrics']}}
+      volumes:
+        - name: image-store
+          persistentVolumeClaim:
+            claimName: glance-pvclaim
+        - name: openstack-kube
+          gitRepo:
+            repository: {{cluster_config['cluster.configuration.repository']}}
+            revision: {{cluster_config['cluster.configuration.revision']}}
+        - name: cluster-config
+          configMap:
+            name: cluster-config
+        - name: cluster-secret
+          secret:
+            secretName: cluster-secret
+        - name: glance-etc
+          configMap:
+            name: glance-etc
+        - name: glance-bin
+          configMap:
+            name: glance-bin

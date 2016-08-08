@@ -1,0 +1,91 @@
+kind: Deployment
+apiVersion: extensions/v1beta1
+
+metadata:
+  name: rabbitmq
+  namespace: monsoon3
+  labels:
+    system: openstack
+    component: messaging
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      name: rabbitmq
+  template:
+    metadata:
+      labels:
+        name: rabbitmq
+      annotations:
+
+        checksum/rabbitmq.bin: {{checksums['rabbitmq-bin-configmap.yaml']}}
+    spec:
+      nodeSelector:
+        zone: farm
+      volumes:
+        - name: rabbitmq-persistent-storage
+          persistentVolumeClaim:
+            claimName: rabbitmq-pvclaim
+        - name: openstack-kube
+          gitRepo:
+            repository: {{cluster_config['cluster.configuration.repository']}}
+            revision: {{cluster_config['cluster.configuration.revision']}}
+        - name: cluster-config
+          configMap:
+            name: cluster-config
+        - name: cluster-secret
+          secret:
+            secretName: cluster-secret
+        - name: container-init
+          configMap:
+            name: rabbitmq-bin
+      containers:
+        - name: rabbitmq
+          image: rabbitmq:3-management
+          command:
+            - /openstack-kube/openstack-kube/scripts/_container_init
+          args:
+            - rabbitmq-start
+#          env:
+#          - name: RABBITMQ_NODENAME
+#            value: monsoon3-rabbitmq
+          livenessProbe:
+            tcpSocket:
+              port: {{cluster_config['rabbitmq.port.public']}}
+            initialDelaySeconds: 60
+            timeoutSeconds: 5
+          ports:
+            - name: rabbitmq
+              containerPort: {{cluster_config['rabbitmq.port.public']}}
+            - name: rabbitmq-mgmt
+              containerPort: {{cluster_config['rabbitmq.port.management']}}
+          volumeMounts:
+            - mountPath: /openstack-kube
+              name: openstack-kube
+            - mountPath: /cluster-config
+              name: cluster-config
+            - mountPath: /cluster-secret
+              name: cluster-secret
+            - name: rabbitmq-persistent-storage
+              mountPath: /var/lib/rabbitmq
+            - mountPath: /container.init
+              name: container-init
+        - name: metrics
+          image: kbudde/rabbitmq-exporter
+          env:
+            - name: PUBLISH_PORT
+              value: "{{cluster_config['rabbitmq.port.metrics']}}"
+            - name: RABBIT_USER
+              value: "{{cluster_config['rabbitmq.metrics.user']}}"
+            - name: RABBIT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: cluster-secret
+                  key: rabbitmq.metrics.pass
+            - name: RABBIT_URL
+              value: "http://${RABBITMQ_SERVICE_HOST}:{{cluster_config['rabbitmq.port.management']}}"
+          ports:
+            - name: metrics
+              containerPort: {{cluster_config['rabbitmq.port.metrics']}}

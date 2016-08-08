@@ -1,0 +1,37 @@
+kind: ReplicationController
+apiVersion: v1
+
+metadata:
+  name: worker 
+  namespace: lyra
+
+spec:
+  replicas: 1
+  selector:
+    name: worker 
+  template:
+    metadata:
+      labels:
+        name: worker 
+    spec:
+      nodeSelector:
+        zone: farm
+      containers:
+        - name: worker 
+          image: docker.mo.sap.corp/monsoon/monsoon-automation:latest
+          args: [ que, ./config/environment.rb ] 
+          env:
+            - name: QUE_QUEUE
+              value: default
+            - name: QUE_WORKER_COUNT
+              value: "10"
+<%- @config_vars.each do |key| -%>
+            - name: <%= key %>
+              valueFrom: { configMapKeyRef: { name: <%= @config_map_name %>, key: <%= key.downcase.gsub(/_/, '.') %> } }
+<%- end -%>
+<%- @secret_vars.each do |key| -%>
+            - name: <%= key %>
+              valueFrom: { secretKeyRef:    { name: <%= @secret_name %>, key: <%= key.downcase.gsub(/_/, '.') %> } }
+<%- end -%>
+          #TODO: liveness checks
+          #TODO: adjust grace period

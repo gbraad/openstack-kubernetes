@@ -1,0 +1,85 @@
+# replace {{component_config['nodeId']}} and {{component_config['nodeCount']}} with the actual ID (1..N) and count (N) of replicas/shards of the service
+apiVersion: v1
+kind: ReplicationController
+
+metadata:
+  name: monasca-zookeeper-{{component_config['nodeId']}}
+  namespace: monasca
+  labels:
+    system: openstack
+    service: monitoring
+
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        component: monasca-zookeeper-{{component_config['nodeId']}}
+    spec:
+      nodeSelector:
+        zone: farm
+      terminationGracePeriodSeconds: 120
+      volumes:
+        - name: monasca-zookeeper-{{component_config['nodeId']}}-persistent-storage
+#          emptyDir: {}
+          persistentVolumeClaim:
+            claimName: monasca-zookeeper-{{component_config['nodeId']}}-pvclaim
+        - name: openstack-kube
+          gitRepo:
+            repository: {{cluster_config['cluster.configuration.repository']}}
+            revision: {{cluster_config['cluster.configuration.revision']}}
+        - name: cluster-config
+          configMap:
+            name: cluster-config
+        - name: cluster-secret
+          secret:
+            secretName: cluster-secret
+      containers:
+        - name: monasca-zookeeper
+          image: docker.mo.sap.corp/monasca/monasca-zookeeper-cluster:latest
+          imagePullPolicy: Always
+          command:
+            - dumb-init
+          args:
+            - /openstack-kube/openstack-kube/scripts/monasca/zookeeper-cluster_start
+          ports:
+            - containerPort: {{cluster_config['monasca.zookeeper.port.internal']}}
+              name: zooclient
+            - containerPort: {{cluster_config['monasca.zookeeper.port.follower']}}
+              name: zoofollower
+            - containerPort: {{cluster_config['monasca.zookeeper.port.leader']}}
+              name: zooleader
+            - name: dummymasterport
+              hostPort: {{cluster_config['monasca.zookeeper.dummy.port']}}
+              containerPort: {{cluster_config['monasca.zookeeper.dummy.port']}}
+          volumeMounts:
+            - name: monasca-zookeeper-{{component_config['nodeId']}}-persistent-storage
+              mountPath: /var/lib/zookeeper
+              readOnly: false
+            - mountPath: /openstack-kube
+              name: openstack-kube
+            - mountPath: /cluster-config
+              name: cluster-config
+            - mountPath: /cluster-secret
+              name: cluster-secret
+          env:
+            - name: ZOOKEEPER_ID
+              value: "{{component_config['nodeId']}}"
+            - name: ZOOKEEPER_SERVER_1
+              value: "monasca-zookeeper-1"
+            - name: ZOOKEEPER_SERVER_2
+              value: "monasca-zookeeper-2"
+            - name: ZOOKEEPER_SERVER_3
+              value: "monasca-zookeeper-3"
+            - name: MONASCA_ZOOKEEPER_PORT_INTERNAL
+              value: "{{cluster_config['monasca.zookeeper.port.internal']}}"
+          lifecycle:
+            preStop:
+              exec:
+                command: ["/openstack-kube/openstack-kube/scripts/monasca/zookeeper-cluster_stop"]
+          livenessProbe:
+            exec:
+              command:
+              - /openstack-kube/openstack-kube/scripts/monasca/zookeeper_liveness
+            timeoutSeconds: 30
+            initialDelaySeconds: 60

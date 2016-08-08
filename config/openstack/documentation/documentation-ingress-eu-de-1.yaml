@@ -1,0 +1,17 @@
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: documentation
+  namespace: documentation
+spec:
+  tls:
+     - secretName: documentation
+       hosts: [documentation.eu-de-1.cloud.sap]
+  rules:
+  - host: documentation.eu-de-1.cloud.sap
+    http:
+      paths:
+      - path: /
+        backend:
+          serviceName: documentation
+          servicePort: 80

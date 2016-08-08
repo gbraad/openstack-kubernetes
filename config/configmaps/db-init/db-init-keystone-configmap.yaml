@@ -1,0 +1,34 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: db-init-keystone
+  labels:
+    system: openstack
+    component: configuration
+
+data:
+  db-init.sh: |
+    #!/usr/bin/env bash
+
+    data_dir=/postgresql-data/data
+
+    if [[ ! -e $data_dir ]]
+    then
+      mkdir $data_dir
+    fi
+
+    cp /openstack-kube/openstack-kube/etc/postgres/postgresql.conf  $data_dir/postgresql.conf
+
+
+    . /openstack-kube/openstack-kube/scripts/common
+
+    export PGUSER=postgres
+    psql <<- EOSQL
+        CREATE DATABASE $KEYSTONE_DB_NAME;
+        CREATE ROLE $KEYSTONE_DB_USER WITH ENCRYPTED PASSWORD '$KEYSTONE_DB_PASSWORD' LOGIN;
+        GRANT ALL PRIVILEGES ON DATABASE $KEYSTONE_DB_NAME TO $KEYSTONE_DB_USER;
+    EOSQL
+
+
+

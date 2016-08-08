@@ -1,0 +1,75 @@
+kind: ReplicationController
+apiVersion: v1
+
+metadata:
+  name: blackbox-metrics
+  namespace: monitoring
+  labels:
+    app: blackbox-metrics
+
+spec:
+  replicas: 1
+  selector:
+    app: blackbox-metrics
+  template:
+    metadata:
+      labels:
+        app: blackbox-metrics
+    spec:
+      nodeSelector:
+        zone: farm
+      containers:
+        - name: metrics
+          image: docker.mo.sap.corp/monsoon-docker/blackbox-healthcheck:latest
+          ports:
+            - containerPort: 9101
+          args:
+            - -web.listen-address=0.0.0.0:9101
+            - -namespace=blackbox
+            - checks/openstack/*
+          env:
+            - name: OS_AUTH_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: blackbox-metrics
+                  key: monsoon.openstack.auth.url
+            - name: OS_IDENTITY_API_VERSION
+              valueFrom:
+                configMapKeyRef:
+                  name: blackbox-metrics
+                  key: monsoon.openstack.identity.api.version
+            - name: OS_USERNAME
+              valueFrom:
+                configMapKeyRef:
+                  name: blackbox-metrics
+                  key:  monsoon.openstack.user.name
+            - name: OS_USER_DOMAIN_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: blackbox-metrics
+                  key:  monsoon.openstack.user.domain.name
+            - name: OS_PROJECT_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: blackbox-metrics
+                  key:  monsoon.openstack.project.name
+            - name: OS_PROJECT_DOMAIN_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: blackbox-metrics
+                  key:  monsoon.openstack.project.domain.name
+            - name: OS_REGION_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: blackbox-metrics
+                  key:  monsoon.openstack.region
+            - name: OS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: blackbox-metrics
+                  key: monsoon.openstack.password
+            - name: MONSOON_ROUTER_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: blackbox-metrics
+                  key:  monsoon.router.url

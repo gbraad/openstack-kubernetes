@@ -1,0 +1,5 @@
+#!/bin/bash
+
+echo "Safely shutting down Kafka"
+echo "* invoking Kafka stop command"
+/opt/kafka/current/bin/kafka-server-stop.sh

@@ -1,0 +1,26 @@
+#!/bin/bash
+
+# set some env variables from the openstack env properly based on env
+. /monasca-common-start/common-start
+
+. /monasca-zookeeper-cluster-prereq/zookeeper-cluster-prereq
+
+mkdir -p /var/log/monasca/persister
+mkdir -p /etc/monasca
+
+# get the persister config file and replace with the secrets inside of it
+cp -f ${CLUSTER_CONFIG_PATH}/monasca-persister/persister.conf  /etc/monasca/
+sed -i "s,MONASCA_INFLUXDB_MONPERSISTER_PASSWORD,$MONASCA_INFLUXDB_MONPERSISTER_PASSWORD,g" /etc/monasca/persister.conf
+sed -i "s/MONASCA_KAFKA_CLUSTER_URLS/${MONASCA_KAFKA_CLUSTER_URLS}/g" /etc/monasca/persister.conf
+sed -i "s/MONASCA_ZOOKEEPER_CLUSTER_URLS/${MONASCA_ZOOKEEPER_CLUSTER_URLS}/g" /etc/monasca/persister.conf
+sed -i "s,MONASCA_INFLUXDB_ENDPOINT_HOST_INTERNAL,${MONASCA_INFLUXDB_ENDPOINT_HOST_INTERNAL},g" /etc/monasca/persister.conf
+sed -i "s,KAFKA_CLIENT_ID,${KUBE_RC_NAME},g" /etc/monasca/persister.conf
+sed -i "s,KAFKA_CONSUMER_ID,${KUBE_POD_NAME},g" /etc/monasca/persister.conf
+
+# setup monasca agent after the process is up
+(sleep 15; /openstack-kube/openstack-kube/scripts/monasca/cfg-monasca-agent.sh) &
+
+
+/usr/share/python/monasca-persister/bin/monasca-persister
+echo "Persister could not be started: dump config"
+cat /etc/monasca/persister.conf | grep -v "password"

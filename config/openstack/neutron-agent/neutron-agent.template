@@ -1,0 +1,261 @@
+kind: Deployment
+apiVersion: extensions/v1beta1
+
+metadata:
+  name: {{component_config['name']}}
+  namespace: monsoon3
+  labels:
+    system: openstack
+    component: neutron
+  annotations:
+    kubernetes.io/change-cause: {{cluster_config['cluster.deployment.reason']}}
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  template:
+
+    metadata:
+      labels:
+        name: {{component_config['name']}}
+      annotations:
+        checksum/neutron.etc: {{checksums['neutron-etc-configmap.yaml']}}
+        checksum/neutron.bin: {{checksums['neutron-bin-configmap.yaml']}}
+        scheduler.alpha.kubernetes.io/affinity: >
+            {
+            "nodeAffinity": {
+              "requiredDuringSchedulingIgnoredDuringExecution": {
+                "nodeSelectorTerms": [
+                  {
+                    "matchExpressions": [
+                      {
+                        "key": "kubernetes.io/hostname",
+                        "operator": "In",
+                        "values": ["{{component_config['targetnode']}}"]
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+            }
+    spec:
+      hostNetwork: true
+      hostPID: true
+      hostIPC: true
+      containers:
+        - name: neutron-dhcp-agent
+          image: {{cluster_config['cluster.image.repository']}}/{{cluster_config['cluster.image.namespace']}}/ubuntu-source-neutron-dhcp-agent:{{cluster_config['image.version.kolla.base']}}
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            privileged: true
+          command:
+            - /openstack-kube/openstack-kube/scripts/_container_init
+          args:
+            - neutron-dhcp-agent-start
+          livenessProbe:
+            exec:
+              command:
+              - /openstack-kube/openstack-kube/scripts/liveness-checks/neutron/service-liveness-check
+              - --config-file=/etc/neutron/neutron.conf
+              - --config-file=/openstack-kube/openstack-kube/scripts/liveness-checks/neutron/dhcp-agent-liveness.conf
+            initialDelaySeconds: 30
+            timeoutSeconds: 10
+            periodSeconds: 30
+            failureThreshold: 2
+          volumeMounts:
+            - mountPath: /var/run
+              name: run
+            - mountPath: /openstack-kube
+              name: openstack-kube
+            - mountPath: /cluster-config
+              name: cluster-config
+            - mountPath: /cluster-secret
+              name: cluster-secret
+            - mountPath: /neutron-etc
+              name: neutron-etc
+            - mountPath: /neutron-patches
+              name: neutron-patches
+            - mountPath: /container.init
+              name: container-init
+        - name: neutron-metadata-agent
+          image: {{cluster_config['cluster.image.repository']}}/{{cluster_config['cluster.image.namespace']}}/ubuntu-source-neutron-metadata-agent:{{cluster_config['image.version.kolla.base']}}
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            privileged: true
+          command:
+            - /openstack-kube/openstack-kube/scripts/_container_init
+          args:
+            - neutron-metadata-agent-start
+          livenessProbe:
+            exec:
+              command:
+              - /openstack-kube/openstack-kube/scripts/liveness-checks/neutron/service-liveness-check
+              - --config-file=/etc/neutron/neutron.conf
+              - --config-file=/openstack-kube/openstack-kube/scripts/liveness-checks/neutron/metadata-agent-liveness.conf
+            initialDelaySeconds: 30
+            timeoutSeconds: 10
+            periodSeconds: 30
+            failureThreshold: 2
+
+          volumeMounts:
+            - mountPath: /var/run
+              name: run
+            - mountPath: /openstack-kube
+              name: openstack-kube
+            - mountPath: /cluster-config
+              name: cluster-config
+            - mountPath: /cluster-secret
+              name: cluster-secret
+            - mountPath: /neutron-etc
+              name: neutron-etc
+            - mountPath: /container.init
+              name: container-init
+        - name: neutron-l3-agent
+          image: {{cluster_config['cluster.image.repository']}}/{{cluster_config['cluster.image.namespace']}}/ubuntu-source-neutron-l3-agent:{{cluster_config['image.version.kolla.base']}}
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            privileged: true
+          command:
+            - /openstack-kube/openstack-kube/scripts/_container_init
+          args:
+            - neutron-l3-agent-start
+          livenessProbe:
+            exec:
+              command:
+              - /openstack-kube/openstack-kube/scripts/liveness-checks/neutron/service-liveness-check
+              - --config-file=/etc/neutron/neutron.conf
+              - --config-file=/openstack-kube/openstack-kube/scripts/liveness-checks/neutron/l3-agent-liveness.conf
+            initialDelaySeconds: 30
+            timeoutSeconds: 10
+            periodSeconds: 30
+            failureThreshold: 2
+
+          volumeMounts:
+            - mountPath: /var/run
+              name: run
+            - mountPath: /lib/modules
+              name: modules
+              readOnly: true
+            - mountPath: /openstack-kube
+              name: openstack-kube
+            - mountPath: /cluster-config
+              name: cluster-config
+            - mountPath: /cluster-secret
+              name: cluster-secret
+            - mountPath: /neutron-etc
+              name: neutron-etc
+            - mountPath: /container.init
+              name: container-init
+        - name: neutron-ovs-agent
+          image: {{cluster_config['cluster.image.repository']}}/{{cluster_config['cluster.image.namespace']}}/ubuntu-source-neutron-openvswitch-agent:{{cluster_config['image.version.kolla.base']}}
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            privileged: true
+          command:
+            - /openstack-kube/openstack-kube/scripts/_container_init
+          args:
+            - neutron-ovs-agent-start
+
+          livenessProbe:
+            exec:
+              command:
+              - /openstack-kube/openstack-kube/scripts/liveness-checks/neutron/service-liveness-check
+              - --config-file=/etc/neutron/neutron.conf
+              - --config-file=/openstack-kube/openstack-kube/scripts/liveness-checks/neutron/ovs-agent-liveness.conf
+            initialDelaySeconds: 30
+            timeoutSeconds: 10
+            periodSeconds: 30
+            failureThreshold: 2
+
+          volumeMounts:
+            - mountPath: /var/run
+              name: run
+            - mountPath: /lib/modules
+              name: modules
+              readOnly: true
+            - mountPath: /openstack-kube
+              name: openstack-kube
+            - mountPath: /cluster-config
+              name: cluster-config
+            - mountPath: /cluster-secret
+              name: cluster-secret
+            - mountPath: /neutron-etc
+              name: neutron-etc
+            - mountPath: /container.init
+              name: container-init
+
+        - name: ovs
+          image: {{cluster_config['cluster.image.repository']}}/{{cluster_config['cluster.image.namespace']}}/ubuntu-source-openvswitch-vswitchd:{{cluster_config['image.version.kolla.base']}}
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            privileged: true
+          command:
+            - /openstack-kube/openstack-kube/scripts/_container_init
+          args:
+            - neutron-ovs-start
+          env:
+            - name: DEBUG_CONTAINER
+              value: "false"
+          volumeMounts:
+            - mountPath: /var/run
+              name: run
+            - mountPath: /lib/modules
+              name: modules
+              readOnly: true
+            - mountPath: /openstack-kube
+              name: openstack-kube
+            - mountPath: /cluster-config
+              name: cluster-config
+            - mountPath: /cluster-secret
+              name: cluster-secret
+            - mountPath: /container.init
+              name: container-init
+        - name: ovs-db
+          image: {{cluster_config['cluster.image.repository']}}/{{cluster_config['cluster.image.namespace']}}/ubuntu-source-openvswitch-db-server:{{cluster_config['image.version.kolla.base']}}
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            privileged: true
+          command:
+            - /openstack-kube/openstack-kube/scripts/_container_init
+          args:
+            - neutron-ovs-db-start
+          volumeMounts:
+            - mountPath: /lib/modules
+              name: modules
+            - mountPath: /var/run
+              name: run
+            - mountPath: /openstack-kube
+              name: openstack-kube
+            - mountPath: /cluster-config
+              name: cluster-config
+            - mountPath: /cluster-secret
+              name: cluster-secret
+            - mountPath: /container.init
+              name: container-init
+      volumes:
+        - name : run
+          emptyDir:
+            medium: Memory
+        - name : modules
+          hostPath:
+            path: /lib/modules
+        - name: openstack-kube
+          gitRepo:
+            repository: {{cluster_config['cluster.configuration.repository']}}
+            revision: {{cluster_config['cluster.configuration.revision']}}
+        - name: cluster-config
+          configMap:
+            name: cluster-config
+        - name: cluster-secret
+          secret:
+            secretName: cluster-secret
+        - name: neutron-etc
+          configMap:
+            name: neutron-etc
+        - name: neutron-patches
+          configMap:
+            name: neutron-patches
+        - name: container-init
+          configMap:
+            name: neutron-bin

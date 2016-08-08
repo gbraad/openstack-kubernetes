@@ -1,0 +1,42 @@
+init_config:
+
+instances:
+ - name: Prometheus
+   url: '{{cluster_config['prometheus_url']}}/federate'
+   mapping:
+      dimensions:
+         resource: resource
+         kubernetes.namespace: kubernetes_namespace
+         kubernetes.pod_name: kubernetes_pod_name
+         hostname: kubernetes_io_hostname
+      groups:
+         dns.bind:
+             gauges: [ 'bind_(up)' ]
+             rates: [ 'bind_(incoming_queries)_total', 'bind_(responses)_total' ]
+             dimensions:
+                 kubernetes.container_name: kubernetes_name
+                 dns.bind_result: result
+                 dns.bind_type: type
+         kubernetes:
+             gauges: [ '(container_start_time_sec)onds', 'container_memory_usage_bytes' ]
+             rates: [ '(container_cpu_usage_sec)onds_total', '(container_network_.*_packages)_total' ]
+             dimensions:
+                 kubernetes.container_name: kubernetes_container_name
+                 kubernetes.cpu: cpu
+                 kubernetes.zone: zone
+         wsgi:
+             rates: [ '.*_(reponses)_by_api_counter', '.*_(requests)_total_counter' ]
+             gauges: [ '.*_(latency)_by_api_timer' ]
+             dimensions:
+                 service: component
+                 method: method
+                 api: api
+                 le: le
+                 quantile: quantile
+                 status: status
+                 instance_host:
+                     source_key: 'instance'
+                     regex: '(.*):[0-9]+'
+                 instance_port:
+                     source_key: 'instance'
+                     regex: '.*:([0-9]+)'

@@ -1,0 +1,14 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: monasca-es-admin
+  namespace: monasca
+  labels:
+    system: openstack
+    service: monitoring
+spec:
+  selector:
+    component: monasca-es-admin
+  ports:
+    - name: admin
+      port: {{cluster_config['monasca.elasticsearch.port.admin']}}

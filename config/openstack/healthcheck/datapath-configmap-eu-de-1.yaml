@@ -1,0 +1,12 @@
+kind: ConfigMap
+apiVersion: v1
+
+metadata:
+  name: blackbox-datapath
+  namespace: monitoring
+
+data:
+  monsoon.datapath.kvm.floatip: 10.47.0.74
+  monsoon.datapath.vmdk.floatip: 10.47.0.75
+
+

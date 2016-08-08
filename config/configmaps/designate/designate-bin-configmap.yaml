@@ -1,0 +1,22 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: designate-bin
+  labels:
+    system: openstack
+    component: configuration
+
+data:
+  designate-api-start: |
+    {{config['designate/designate-api-start']}}
+  designate-central-start: |
+    {{config['designate/designate-central-start']}}
+  designate-mdns-start: |
+    {{config['designate/designate-mdns-start']}}
+  designate-poolmanager-start: |
+    {{config['designate/designate-poolmanager-start']}}
+  common.sh: |
+    {{config['common.sh']}}
+
+

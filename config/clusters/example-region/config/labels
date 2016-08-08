@@ -1,0 +1,7 @@
+master0.example-region.sap zone=farm
+master1.example-region.sap zone=farm
+master2.example-region.sap zone=farm
+network0.example-region.sap zone=petting-zoo species=network
+minion0.example-region.sap zone=farm
+minion1.example-region.sap zone=petting-zoo species=hypervisor
+network1.example-region.sap zone=petting-zoo species=network

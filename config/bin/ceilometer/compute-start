@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+
+# do some tasks required for all ceilometer containers
+. /ceilometer-bin/common-start
+
+# check if the ceilometer-rabbitmq is already around
+. /ceilometer-bin/rabbitmq-prereq
+
+function process_config {
+  cp /ceilometer-etc/api_paste.ini /etc/ceilometer
+  cp /ceilometer-etc/ceilometer.conf /etc/ceilometer
+  cp /ceilometer-etc/event_definitions.yaml /etc/ceilometer
+  cp /ceilometer-etc/event_pipeline.yaml /etc/ceilometer
+  cp /ceilometer-etc/pipeline.yaml /etc/ceilometer
+  cp /ceilometer-etc/policy.json /etc/ceilometer
+}
+
+function start_application {
+    ceilometer-polling --polling-namespaces compute --config-dir /etc/ceilometer --config-file /etc/ceilometer/ceilometer.conf
+}
+
+process_config
+
+start_application

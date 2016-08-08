@@ -1,0 +1,9 @@
+volumes:
+  - name: cinder-volume-netapp
+    config: volume-netapp
+    template: cinder-volume
+    spec_type: deployment.yaml
+  - name: cinder-volume-vmware
+    config: volume-vmware
+    template: cinder-volume
+    spec_type: deployment.yaml

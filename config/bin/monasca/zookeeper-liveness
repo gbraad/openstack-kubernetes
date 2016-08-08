@@ -1,0 +1,11 @@
+#!/bin/bash
+
+echo ruok | nc localhost $MONASCA_ZOOKEEPER_PORT_INTERNAL | grep -w -q imok
+RC=$?
+if [ $RC != 0 ] ; then
+  echo "Zookeeper liveness check failed"
+  echo "Diagostics:"
+  set -x
+  echo ruok | nc localhost $MONASCA_ZOOKEEPER_PORT_INTERNAL
+  exit 1
+fi

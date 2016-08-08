@@ -1,0 +1,13 @@
+#!/bin/bash
+
+unset http_proxy https_proxy all_proxy
+
+
+THRESH_PID=$(cat /var/tmp/monasca-thresh.pid)
+NIMBUS_PID=$(cat /var/tmp/storm-nimbus.pid)
+
+# to be ready, ZK needs to be up and both nimbus and thresholder need to be up in addition to the supervisor as main process
+set -e
+/monasca-zookeeper-cluster-prereq/zookeeper-cluster-prereq
+kill -0 $THRESH_PID
+kill -0 $NIMBUS_PID

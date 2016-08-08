@@ -1,0 +1,68 @@
+kind: ReplicationController
+apiVersion: v1
+
+metadata:
+  name: api 
+
+spec:
+  replicas: 1
+  selector:
+    name: api 
+  template:
+    metadata:
+      labels:
+        name: api 
+    spec:
+      nodeSelector:
+        zone: farm
+      volumes:
+        - name: api-transport-credentials
+          emptyDir: {}
+      containers:
+        - name: api 
+          image: docker.mo.sap.corp/monsoon/arc-api
+          env:
+            - name: ARC_LISTEN
+              value: 0.0.0.0:80
+            - name: ARC_ENV
+              value: production
+            - name: ARC_ENDPOINT
+              value: tls://mosquitto:8883
+            - name: ARC_TLS_CA_CERT
+              value: /etc/api/transport_CA.crt
+            - name: ARC_TLS_CLIENT_CERT
+              value: /etc/api/transport.crt
+            - name: ARC_TLS_CLIENT_KEY
+              value: /etc/api/transport.key
+            - name: ARC_LOG_LEVEL
+              valueFrom: { configMapKeyRef: { name: arc, key: arc.log.level } }
+            - name: COMMON_NAME # use pod name as common name 
+              valueFrom: { fieldRef: { fieldPath: metadata.name } }
+            - name: DBUSER
+              value: postgres
+            - name: DBHOST
+              value: postgres
+            - name: DBPASSWORD
+              valueFrom: { secretKeyRef:    { name: arc, key: arc.db.password } }
+            - name: ARC_KEYSTONE_ENDPOINT
+              valueFrom: { configMapKeyRef: { name: arc, key: arc.keystone.endpoint } }
+          ports:
+            - name: api 
+              containerPort: 80 
+          volumeMounts:
+            - name: api-transport-credentials
+              mountPath: /etc/api
+          readinessProbe:
+            httpGet:
+              # Path to probe; should be cheap, but representative of typical behavior
+              path: /readiness
+              port: 80 
+            initialDelaySeconds: 5 
+            timeoutSeconds: 1
+          livenessProbe:
+            httpGet:
+              # Path to probe; should be cheap, but representative of typical behavior
+              path: /healthcheck
+              port: 80 
+            initialDelaySeconds: 20
+            timeoutSeconds: 1

@@ -1,0 +1,21 @@
+apiVersion: extensions/v1beta1
+kind: Ingress
+
+metadata:
+  name: nova-console
+  namespace: monsoon3
+  labels:
+    system: openstack
+    component: nova
+spec:
+  tls:
+     - secretName: tls-{{cluster_config['nova.console.endpoint.host'].replace(".","-")}}
+       hosts: [{{cluster_config['nova.console.endpoint.host']}}]
+  rules:
+    - host: {{cluster_config['nova.console.endpoint.host']}}
+      http:
+        paths:
+        - path: /
+          backend:
+            serviceName: nova-console
+            servicePort: {{cluster_config['nova.novnc.port.public']}}

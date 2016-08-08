@@ -1,0 +1,48 @@
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: updates-proxy 
+  namespace: arc
+data:
+  default.conf: |
+    server {
+      listen       80;
+      server_name  stable.arc.eu-de-1.cloud.sap default;
+
+      location / {
+        proxy_buffering off;
+        proxy_ssl_verify_depth 0;
+        proxy_pass https://objectstore.eu-de-1.cloud.sap/v1/AUTH_p-7496766f1/arc-releases-stable/;
+        proxy_redirect ~^https?://objectstore.eu-de-1.cloud.sap/v1/AUTH_p-7496766f1/arc-releases-stable/(.*)$ /$1;
+        proxy_set_header X-Forwarded-For        $proxy_add_x_forwarded_for;
+      }
+
+    }
+
+    server {
+      listen       80;
+      server_name  beta.arc.eu-de-1.cloud.sap;
+
+      location / {
+        proxy_buffering off;
+        proxy_ssl_verify_depth 0;
+        proxy_pass https://objectstore.eu-de-1.cloud.sap/v1/AUTH_p-7496766f1/arc-releases-beta/;
+        proxy_redirect ~^https?://objectstore.eu-de-1.cloud.sap/v1/AUTH_p-7496766f1/arc-releases-beta/(.*)$ /$1;
+        proxy_set_header X-Forwarded-For        $proxy_add_x_forwarded_for;
+      }
+
+    }
+
+    server {
+      listen       80;
+      server_name  alpha.arc.eu-de-1.cloud.sap;
+
+      location / {
+        proxy_buffering off;
+        proxy_ssl_verify_depth 0;
+        proxy_pass https://objectstore.eu-de-1.cloud.sap/v1/AUTH_p-7496766f1/arc-releases-alpha/;
+        proxy_redirect ~^https?://objectstore.eu-de-1.cloud.sap/v1/AUTH_p-7496766f1/arc-releases-alpha/(.*)$ /$1;
+        proxy_set_header X-Forwarded-For        $proxy_add_x_forwarded_for;
+      }
+
+    }

@@ -1,0 +1,47 @@
+db_migrations() {
+
+    echo "Running DB migration for Keystone"
+    get_pod_id keystone
+    kubectl exec $POD_ID keystone-manage db_sync #> /dev/null 2>&1 &
+
+    echo "Running DB migration for Nova"
+    get_pod_id nova-api
+    kubectl exec $POD_ID nova-manage db sync #> /dev/null 2>&1 &
+    kubectl exec $POD_ID nova-manage api_db sync #> /dev/null 2>&1 &
+
+
+
+    get_pod_id ironic-api
+    echo "Running DB migration for Ironic on pod ironic-api-$POD_ID"
+    kubectl exec $POD_ID ironic-dbsync -- --config-file /etc/ironic/ironic.conf create_schema #> /dev/null 2>&1 &
+
+    #TODO : ACI driver needs to be able to survive in case we miss schema on startup
+
+    #get_pod_id neutron-server
+    #echo "Running DB migration for Neutron on pod neutron-api-$POD_ID"
+    #kubectl exec $POD_ID neutron-db-manage -- --config-file /etc/neutron/neutron.conf --config-file /etc/neutron/plugins/ml2/ml2_conf.ini upgrade head #> /dev/null 2>&1 &
+
+    # Since mitaka api won't start without the DB.
+
+    #echo "Running DB migration for Cinder"
+    #get_pod_id cinder-api
+    #kubectl exec $POD_ID cinder-manage db sync #> /dev/null 2>&1 &
+
+    echo "Running DB migration for Glance"
+    get_pod_id glance
+    kubectl exec $POD_ID -c glance-api glance-manage db_sync #> /dev/null 2>&1 &
+
+
+    echo "Running DB migration for Manila"
+    get_pod_id manila-api
+    kubectl exec $POD_ID  manila-manage db sync #> /dev/null 2>&1 &
+
+
+    echo "Running DB migration for Designate"
+    get_pod_id designate-central
+    kubectl exec $POD_ID designate-manage database sync #> /dev/null 2>&1 &
+    kubectl exec $POD_ID designate-manage pool-manager-cache sync #> /dev/null 2>&1 &
+
+
+    wait
+}

@@ -1,0 +1,326 @@
+#!/usr/bin/env bash
+
+start=`date +%s`
+
+REPO_REVISION=$(git rev-parse HEAD)
+
+echo "Starting Monsoon3 Openstack deployment based on revision $REPO_REVISION"
+
+OPENSTACK_KUBE_ROOT_PATH=$(cd "$(dirname "$0")/.."; pwd)
+OPENSTACK_KUBE_SCRIPT_PATH=${OPENSTACK_KUBE_ROOT_PATH}/scripts
+OPENSTACK_KUBE_CONFIG_PATH=${OPENSTACK_KUBE_ROOT_PATH}/config
+OPENSTACK_KUBE_SECRETS_PATH=$OPENSTACK_KUBE_ROOT_PATH/../openstack-kube-secrets
+
+. $OPENSTACK_KUBE_SCRIPT_PATH/kube_functions/kube_functions
+. $OPENSTACK_KUBE_SCRIPT_PATH/kube_functions/db_migrations
+. $OPENSTACK_KUBE_SCRIPT_PATH/kube_functions/create_tls_secrets
+
+echo $1
+
+if   [ -z "$1" ] ||  [ -z "$2" ] || [ "$1" = "--help" ]
+then
+    echo
+    echo "Usage: "
+    echo "      os-deploy [namespace] [cluster] [--run-migrations]"
+    exit 0
+fi
+
+
+
+
+if [ ! -d "$OPENSTACK_KUBE_SECRETS_PATH" ]
+then
+    echo "This script expects that the accompanying openstack-kube-secrets repo"
+    echo "exists in the same directory as the openstack-kube repo"
+    exit 1
+fi
+
+NAMESPACE=$1
+CLUSTER=$2
+CONTEXT=${NAMESPACE}-${CLUSTER}
+
+if  [ -z "$3" ] &&  [ "$3" =  "--run-migrations" ]
+then
+    RUN_MIGRATIONS=1
+else
+    RUN_MIGRATIONS=0
+fi
+
+echo "*****************************************"
+echo "*                                       *"
+echo "*          Starting deployment          *"
+echo "*                                       *"
+echo "*          Cluster : $CLUSTER               *"
+echo "*          Namespace : $NAMESPACE         *"
+echo "*                                       *"
+echo "*****************************************"
+echo
+echo
+
+create_namespace $NAMESPACE
+
+use_context $CONTEXT
+
+
+
+echo
+echo "********************************************"
+echo "*                                          *"
+echo "*           Preparing K8s Specs            *"
+echo "*             using revision               *"
+echo "* $REPO_REVISION *"
+echo "*                                          *"
+echo "********************************************"
+echo
+
+$OPENSTACK_KUBE_SCRIPT_PATH/tools/prepare_deployment $CLUSTER
+
+
+echo
+echo "*****************************************"
+echo "*                                       *"
+echo "*         Checking Node Labels          *"
+echo "*                                       *"
+echo "*****************************************"
+echo
+
+ensure_node_labels
+
+echo
+echo "*****************************************"
+echo "*                                       *"
+echo "*       Preparing Volume Claims         *"
+echo "*                                       *"
+echo "*****************************************"
+echo
+
+create_volume_claim glance &
+create_volume_claim kvm-shared1 &
+create_volume_claim mongodb &
+create_volume_claim db-barbican &
+create_volume_claim db-cinder &
+create_volume_claim db-glance &
+create_volume_claim db-ironic &
+create_volume_claim db-keystone &
+create_volume_claim db-manila &
+create_volume_claim db-neutron &
+create_volume_claim db-nova &
+create_volume_claim rabbitmq &
+create_volume_claim db-designate &
+
+wait
+
+
+echo
+echo "*****************************************"
+echo "*                                       *"
+echo "*       Preparing  Secrets              *"
+echo "*                                       *"
+echo "*****************************************"
+echo
+
+apply_secrets &
+
+apply_seed_configmap keystone-seed &
+
+wait
+
+echo
+echo "*****************************************"
+echo "*                                       *"
+echo "*       Preparing  TLS Secrets          *"
+echo "*                                       *"
+echo "*****************************************"
+echo
+
+create_tls_secrets $NAMESPACE $CLUSTER
+
+
+echo
+echo "*****************************************"
+echo "*                                       *"
+echo "*        Preparing Configuration        *"
+echo "*                                       *"
+echo "*****************************************"
+echo
+
+apply_configmaps &
+apply_configmaps patches &
+apply_configmaps barbican &
+apply_configmaps cinder &
+apply_configmaps db-init &
+apply_configmaps designate &
+apply_configmaps glance &
+apply_configmaps horizon &
+apply_configmaps ironic &
+apply_configmaps keystone &
+apply_configmaps manila &
+apply_configmaps mariadb &
+apply_configmaps neutron &
+apply_configmaps nova &
+apply_configmaps postgres &
+apply_configmaps rabbitmq &
+
+wait
+
+
+echo
+echo "******************************************"
+echo "*                                        *"
+echo "*       Preparing  Core Components       *"
+echo "*                                        *"
+echo "******************************************"
+echo
+
+
+apply_component postgres-barbican &
+apply_component postgres-cinder &
+apply_component postgres-glance &
+apply_component postgres-ironic &
+apply_component postgres-keystone &
+apply_component postgres-manila &
+apply_component postgres-neutron &
+apply_component postgres-nova &
+apply_component rabbitmq &
+apply_component memcached &
+
+apply_service designate-mariadb &
+apply_deployment designate-mariadb &
+
+wait
+
+ensure_deployments_running postgres-cinder postgres-glance postgres-keystone postgres-manila postgres-neutron postgres-nova rabbitmq memcached
+
+echo
+echo "*****************************************"
+echo "*                                       *"
+echo "*       Preparing API  Components       *"
+echo "*                                       *"
+echo "*****************************************"
+echo
+
+apply_component keystone &
+apply_component glance &
+apply_component horizon &
+apply_component barbican-api &
+apply_service ironic-api &
+apply_service nova-api &
+apply_service nova-console &
+apply_service neutron-server &
+apply_service cinder-api &
+apply_service manila-api &
+apply_deployment designate-central &
+wait
+
+apply_deployment nova-api &
+apply_deployment ironic-api &
+apply_deployment cinder-api &
+apply_deployment manila-api &
+apply_deployment neutron-server &
+apply_component designate-api &
+wait
+
+ensure_deployments_running keystone glance nova-api neutron-server cinder-api ironic-api manila-api
+
+if [ $RUN_MIGRATIONS = "1" ]
+then
+
+    echo
+    echo "*****************************************"
+    echo "*                                       *"
+    echo "*           Running DB Migrations       *"
+    echo "*                                       *"
+    echo "*****************************************"
+    echo
+
+
+    db_migrations
+
+else
+    echo
+    echo "*****************************************"
+    echo "*                                       *"
+    echo "*        Skipping DB Migrations         *"
+    echo "*    use --run-migrations to enable     *"
+    echo "*                                       *"
+    echo "*****************************************"
+    echo
+
+fi
+
+echo
+echo "*****************************************"
+echo "*                                       *"
+echo "*    Preparing Openstack  Components    *"
+echo "*                                       *"
+echo "*****************************************"
+echo
+
+apply_deployment keystone-seeder &
+apply_deployment ironic-conductor &
+apply_component ironic-pxe &
+apply_deployment nova-console &
+apply_deployment nova-scheduler &
+apply_deployment nova-conductor &
+apply_deployment cinder-scheduler &
+apply_deployment manila-scheduler &
+
+apply_from_specs_folder cinder-volumes &
+apply_from_specs_folder nova-hypervisors &
+apply_from_specs_folder manila-shares &
+apply_from_specs_folder  neutron-agents &
+
+apply_deployment neutron-cisco-asr &
+apply_deployment neutron-f5-agent &
+apply_deployment neutron-aci-agent &
+apply_deployment designate-poolmanager &
+apply_service designate-mdns &
+apply_deployment designate-mdns &
+wait
+
+echo
+echo "*****************************************"
+echo "*                                       *"
+echo "*    Preparing Ingress Routers          *"
+echo "*                                       *"
+echo "*****************************************"
+echo
+
+apply_ingress keystone &
+apply_ingress glance &
+apply_ingress horizon &
+apply_ingress barbican-api &
+apply_ingress ironic-api &
+apply_ingress nova-api &
+apply_ingress nova-console &
+apply_ingress neutron-server &
+apply_ingress cinder-api &
+apply_ingress manila-api &
+apply_ingress designate-api &
+wait
+
+end=`date +%s`
+
+runtime=$((end-start))
+
+echo "******************************************"
+echo
+echo "Openstack deployment completed in ${runtime} seconds"
+echo
+echo "******************************************"
+
+
+echo
+echo "******************************************"
+echo
+echo "Openstack bootstrap completed in ${runtime} seconds"
+echo
+echo "Horizon available at http://horizon-3.${CLUSTER}.cloud.sap:8080"
+echo
+echo "******************************************"
+
+echo
+
+curl http://horizon-3.${CLUSTER}.cloud.sap:8080 > /dev/null 2>&1 &
+
+

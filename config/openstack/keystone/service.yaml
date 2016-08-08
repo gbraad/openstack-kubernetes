@@ -1,0 +1,22 @@
+kind: Service
+apiVersion: v1
+
+metadata:
+  name: keystone
+  namespace: monsoon3
+  labels:
+    system: openstack
+    component: keystone
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "{{cluster_config['keystone.port.metrics']}}"
+
+spec:
+  type: NodePort
+  selector:
+    name: keystone
+  ports:
+    - name: public
+      port: {{cluster_config['keystone.api.port.internal']}}
+    - name: admin
+      port: {{cluster_config['keystone.api.port.admin']}}

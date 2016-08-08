@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+
+set -e
+set -x
+
+mkdir /kube.init
+
+cp -L /container.init/$1 /kube.init/container-start
+
+chmod -R +x /kube.init
+
+exec /kube.init/container-start "$@"

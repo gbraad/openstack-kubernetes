@@ -1,0 +1,26 @@
+kind: Service
+apiVersion: v1
+
+metadata:
+  name: nova-api
+  namespace: monsoon3
+  labels:
+    system: openstack
+    component: nova
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "{{cluster_config['nova.port.metrics']}}"
+
+spec:
+  type: NodePort
+  selector:
+    name: nova-api
+  ports:
+    - name: nova-api
+      port: {{cluster_config['nova.api.port.internal']}}
+    - name: nova-metadata
+      port: {{cluster_config['nova.metadata.port.internal']}}
+#    - name: statsd-listen
+#      port: 9125
+#    - name: metrics-listen
+#      port: 9202

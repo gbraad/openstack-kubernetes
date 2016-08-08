@@ -1,0 +1,23 @@
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: keystone-router-config
+data:
+  config: |
+          local _M = {}
+          local os_getenv = os.getenv
+
+          function _M.backends()
+            return {i2={u="https://identity-2.staging.cloud.sap:5000"}, i1={u="https://identity-lab4.eu-de-1.cc.mo.sap.corp:5000"}, i3={u="https://identity-3.staging.cloud.sap"}}
+          end
+
+          function _M.domains()
+            return {monsoon2={"i2"}, default={"i3"}, Default={"i3"}, monsooncc_test={"i1"},ccadmin={"i3"}, monsoon3={"i3"}, default={"i3"}, cctest_cluster_2={"i2"}, cctest_cluster_3={"i3"}}
+          end
+
+          function _M.redis()
+            return {url = "sentinel://mymaster:a",
+                    sentinels = { { host = os_getenv("REDIS_SENTINEL_SERVICE_HOST"), port = os_getenv("REDIS_SENTINEL_SERVICE_PORT") }}}
+          end
+
+          return _M

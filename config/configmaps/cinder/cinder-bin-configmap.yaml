@@ -1,0 +1,21 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cinder-bin
+  labels:
+    system: openstack
+    component: configuration
+
+data:
+  cinder-api-start: |
+    {{config['cinder/cinder-api-start']}}
+  cinder-scheduler-start: |
+    {{config['cinder/cinder-scheduler-start']}}
+  cinder-volume-start: |
+    {{config['cinder/cinder-volume-start']}}
+  common.sh: |
+    {{config['common.sh']}}
+
+
+

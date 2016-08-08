@@ -1,0 +1,35 @@
+#!/bin/bash
+
+# set some env variables from the openstack env properly based on env
+. /monasca-common-start/common-start
+
+#export CONFIG_DIR='/config/monasca/config'
+export CONFIG_FILE="${CLUSTER_CONFIG_PATH}/monasca-influxdb/influxdb.conf"
+export MONASCA_INFLUXDB_PREP_FILE="/var/opt/influxdb/cfg-influxdb.tstamp"
+MONASCA_INFLUXDB_COMMAND='/usr/bin/influxd'
+
+if [ ! -e $MONASCA_INFLUXDB_PREP_FILE ]; then
+  echo "------------------------------------------------------------------------------"
+  echo "Fresh InfluxDB installation detected (no data). Preparing for use with Monasca"
+  echo "------------------------------------------------------------------------------"
+  $MONASCA_INFLUXDB_COMMAND -config=${CONFIG_FILE} > /var/log/influx_docker_1st.log &
+  sleep 10
+  if $(dirname $0)/influxdb_init; then
+    echo "-------------------------------------------------------------"
+    echo "Shutting down InfluxDB to restart with enabled authentication"
+    echo "-------------------------------------------------------------"
+  else
+    echo "ERROR - Initial configuration failed. Waiting 600 secs for diagnosis"
+    sleep 600
+  fi
+  exit 1
+fi
+
+# setup monasca agent after the process is up
+
+export INFLUXDB_MONITORING_USERNAME=${MONASCA_INFLUXDB_MONITORING_USERNAME}
+export INFLUXDB_MONITORING_PASSWORD=${MONASCA_INFLUXDB_MONITORING_PASSWORD}
+(sleep 60; /openstack-kube/openstack-kube/scripts/monasca/cfg-monasca-agent.sh ) &
+
+echo "Start InfluxDB with lock /var/opt/influxdb/.lock"
+chpst -L /var/opt/influxdb/.lock $MONASCA_INFLUXDB_COMMAND -config=${CONFIG_FILE}

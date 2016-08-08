@@ -1,0 +1,39 @@
+kind: ReplicationController
+apiVersion: v1
+
+metadata:
+  name: elektra 
+  namespace: elektra 
+
+spec:
+  replicas: 2
+  selector:
+    name: elektra 
+  template:
+    metadata:
+      labels:
+        name: elektra 
+    spec:
+      nodeSelector:
+        zone: farm
+      containers:
+        - name: rails
+          image: docker.mo.sap.corp/monsoon/monsoon-dashboard:build.latest
+          ports:
+            - name: http
+              containerPort: 80 
+          env:
+<%- @config_vars.each do |key| -%>
+            - name: <%= key %>
+              valueFrom: { configMapKeyRef: { name: <%= @config_map_name %>, key: <%= key.downcase.gsub(/_/, '.') %> } }
+<%- end -%>
+<%- @secret_vars.each do |key| -%>
+            - name: <%= key %>
+              valueFrom: { secretKeyRef:    { name: <%= @secret_name %>, key: <%= key.downcase.gsub(/_/, '.') %> } }
+<%- end -%>
+          livenessProbe:
+            httpGet:
+              path: /system/health
+              port: 80
+            timeoutSeconds: 120
+            initialDelaySeconds: 30 

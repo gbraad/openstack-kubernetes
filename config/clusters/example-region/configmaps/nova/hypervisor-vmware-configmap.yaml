@@ -1,0 +1,12 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: hypervisor-vmware
+  labels:
+    system: openstack
+    component: configuration
+
+data:
+  hypervisor.conf: |
+    {{config['nova/hypervisor-vmware.conf']}}

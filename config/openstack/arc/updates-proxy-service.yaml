@@ -1,0 +1,13 @@
+kind: Service
+apiVersion: v1
+
+metadata:
+  name: updates-proxy
+  namespace: arc
+
+spec:
+  type: ClusterIP 
+  selector:
+    name: updates-proxy
+  ports: 
+    - port: 80 

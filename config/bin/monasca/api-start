@@ -1,0 +1,37 @@
+#!/bin/bash
+
+# set some env variables from the openstack env properly based on env
+. /monasca-common-start/common-start
+
+export KEYSTONE_SSL=$(echo "${KEYSTONE_API_ENDPOINT_PROTOCOL_INTERNAL}" | sed 's,^https$,true,' | sed 's,^http$,false,')
+
+# check if the zookeeper is already around as we need it
+. /monasca/zookeeper-cluster-prereq/zookeeper-cluster-prereq
+. /monasca-influxdb-prereq/influxdb-prereq
+
+# get the config monasca-api config file and replace with the secrets inside of it
+cp -f ${CLUSTER_CONFIG_PATH}/monasca-api/api-config.yml /etc/monasca/
+config_file="/etc/monasca/api-config.yml"
+sed "s/MONASCA_API_USERNAME/$MONASCA_API_USERNAME/" -i $config_file
+sed "s/MONASCA_API_PASSWORD/$MONASCA_API_PASSWORD/" -i $config_file
+sed "s/MONASCA_API_PROJECT_NAME/$MONASCA_API_PROJECT_NAME/" -i $config_file
+sed "s/MONASCA_API_PROJECT_DOMAIN_NAME/$MONASCA_API_PROJECT_DOMAIN_NAME/" -i $config_file
+sed "s/MONASCA_INFLUXDB_MONAPI_PASSWORD/$MONASCA_INFLUXDB_MONAPI_PASSWORD/" -i $config_file
+sed "s/MONASCA_MYSQL_MONAPI_PASSWORD/$MONASCA_MYSQL_MONAPI_PASSWORD/" -i $config_file
+sed "s/KEYSTONE_SSL/$KEYSTONE_SSL/" -i $config_file
+sed "s/KEYSTONE_API_ENDPOINT_HOST_INTERNAL/$KEYSTONE_API_ENDPOINT_HOST_INTERNAL/" -i $config_file
+sed "s/KEYSTONE_API_PORT_INTERNAL/$KEYSTONE_API_PORT_INTERNAL/" -i $config_file
+sed "s/OS_REGION_NAME/$CLUSTER_REGION/" -i $config_file
+sed "s/MONASCA_ZOOKEEPER_CLUSTER_URLS/$MONASCA_ZOOKEEPER_CLUSTER_URLS/" -i $config_file
+sed "s/MONASCA_KAFKA_CLUSTER_URLS/$MONASCA_KAFKA_CLUSTER_URLS/" -i $config_file
+sed "s/MONASCA_INFLUXDB_ENDPOINT_HOST_INTERNAL/$MONASCA_INFLUXDB_ENDPOINT_HOST_INTERNAL/" -i $config_file
+sed "s/MONASCA_MYSQL_ENDPOINT_HOST_INTERNAL/$MONASCA_MYSQL_ENDPOINT_HOST_INTERNAL/" -i $config_file
+sed "s/MONASCA_MYSQL_PORT_INTERNAL/$MONASCA_MYSQL_PORT_INTERNAL/" -i $config_file
+
+# setup monasca agent after the process is up
+
+
+(sleep 60; /openstack-kube/openstack-kube/scripts/monasca/cfg-monasca-agent.sh ) &
+
+# start monasca-api server
+/usr/bin/java -Xmx8g -cp /opt/monasca/monasca-api.jar monasca.api.MonApiApplication server $config_file

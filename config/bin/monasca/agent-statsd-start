@@ -1,0 +1,9 @@
+#!/bin/bash
+
+# common initialization
+. /monasca-agent-start/agent_start
+
+# wait for forwarder to come up
+. /monasca-agent-forwarder-prereq/agent-forwarder_prereq
+
+/usr/share/python/monasca-agent/bin/monasca-statsd 

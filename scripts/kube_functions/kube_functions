@@ -1,0 +1,409 @@
+
+_release_openstack_dir(){
+    local  result=$OPENSTACK_KUBE_CONFIG_PATH/clusters/${CLUSTER}/release/openstack
+    echo $result
+}
+
+_release_volumes_dir(){
+    local  result=$OPENSTACK_KUBE_CONFIG_PATH/clusters/${CLUSTER}/release/volumes
+    echo $result
+}
+
+_release_configmaps_dir(){
+    local  result=$OPENSTACK_KUBE_CONFIG_PATH/clusters/${CLUSTER}/release/configmaps
+    echo $result
+}
+
+_release_bin_dir(){
+    local  result=$OPENSTACK_KUBE_CONFIG_PATH/clusters/${CLUSTER}/release/bin
+    echo $result
+}
+
+_release_secrets_dir(){
+    local  result=$OPENSTACK_KUBE_CONFIG_PATH/clusters/${CLUSTER}/release/secrets
+    echo $result
+}
+
+use_context(){
+    kubectl config use-context $1
+}
+
+get_pod_id() {
+    POD_ID=$(echo $(kubectl get pods | grep ^${1}-'\([a-z0-9]\{10\}-\)\?[a-z0-9]\{5\}') | cut -d' ' -f 1)
+}
+
+ensure_deployments_running() {
+    for deployment_name in "$@"
+    do
+       ensure_deployment_running $deployment_name
+    done
+}
+
+
+ensure_deployment_running(){
+    echo "Waiting for 1 pod in deployment ${1} to become available"
+
+    wait=5
+    n=1
+    m=20
+    until [ $n -ge $m ]
+    do
+        kubectl describe deployment ${1} |grep '^Replicas.*[1-9] available' > /dev/null 2>&1 && break
+        echo "Attempt $n of $m waiting $wait seconds to retry"
+        sleep $wait
+        n=$[$n+1]
+    done
+
+    if [ $n -eq $m ]
+    then
+        echo "${1} failed to enter a running state within 120 seconds"
+        exit 1
+    fi
+
+
+}
+
+ensure_daemonset_running(){
+    echo "Waiting for 1 pod in daemonset ${1} to become available"
+
+    wait=5
+    n=1
+    m=20
+    until [ $n -ge $m ]
+    do
+        kubectl describe daemonset ${1} |grep '^Pods Status.*[1-9] Running' > /dev/null 2>&1 && break
+        echo "Attempt $n of $m waiting $wait seconds to retry"
+        sleep $wait
+        n=$[$n+1]
+    done
+
+    if [ $n -eq $m ]
+    then
+        echo "${1} failed to enter a running state within 120 seconds"
+        exit 1
+    fi
+
+}
+
+
+ensure_pod_running() {
+        echo "Waiting for pod ${1} to enter running state"
+
+        wait=5
+        n=1
+        m=20
+        until [ $n -ge $m ]
+        do
+            kubectl get pod ${1} |grep '[1-9]/[1-9]'| grep Running > /dev/null 2>&1 && break
+            echo "Attempt $n of $m waiting $wait seconds to retry"
+            sleep $wait
+            n=$[$n+1]
+        done
+
+        if [ $n -eq $m ]
+        then
+            echo "${1} failed to enter a running state within 120 seconds"
+            exit 1
+        fi
+}
+
+
+ensure_pods_running() {
+    for pod_name in "$@"
+    do
+        get_pod_id $pod_name
+        ensure_pod_running ${POD_ID}
+    done
+}
+
+
+create_namespace(){
+    kubectl get namespace | grep ^$1 >/dev/null 2>&1
+
+    if [ $? -eq 0 ]
+    then
+        echo "Name space $1 already exists, skipping create"
+    else
+        kubectl create -f $OPENSTACK_KUBE_CONFIG_PATH/namespace.yaml
+    fi
+}
+
+delete_namespace(){
+    kubectl get namespace | grep ^$1 >/dev/null 2>&1
+
+    if [ $? -eq 0 ]
+    then
+        kubectl delete namespace $1 --cascade
+    else
+        echo "Namespace $1 does not exist, skipping delete"
+    fi
+
+}
+
+
+apply_secrets(){
+    result=$(kubectl apply -f $(_release_secrets_dir))
+
+    if [ $? -eq 0 ]
+    then
+        echo "Secrets successfully applied"
+    else
+        echo "Failed to apply on or more secrets"
+        echo $result
+        exit 1
+    fi
+}
+
+
+
+delete_pod(){
+
+   kubectl get pod | grep ^$1 >/dev/null 2>&1
+
+    if [ $? -eq 0 ]
+    then
+     result=$(kubectl delete pod $1 --grace-period=0)
+
+            if [ $? -eq 0 ]
+            then
+                echo "Pod $1 successfully deleted"
+            else
+                echo "Failed to delete pod $1"
+                echo $result
+                exit 1
+            fi
+    else
+        echo "$1 $2 pod already exists, skipping create"
+    fi
+
+
+}
+
+
+
+
+create_pod(){
+    kubectl get pod | grep ^$2 >/dev/null 2>&1
+
+    if [ $? -eq 0 ]
+    then
+        echo "$1 $2 pod already exists, skipping create"
+    else
+       result=$(kubectl create -f $OPENSTACK_KUBE_CONFIG_PATH/${1}/${2}.yaml)
+
+        if [ $? -eq 0 ]
+        then
+            echo "Pod ${1}/${2} successfully created"
+        else
+            echo "Failed to create pod ${1}/${2}"
+            echo $result
+            exit 1
+        fi
+    fi
+
+}
+
+apply_service(){
+    result=$(kubectl apply -f $(_release_openstack_dir)/${1}/service.yaml)
+
+    if [ $? -eq 0 ]
+    then
+        echo "Service $1 successfully applied"
+    else
+        echo "Failed to apply service $1"
+        echo $result
+        exit 1
+    fi
+
+}
+
+apply_replicationcontroller(){
+
+
+    if [ -z "$2" ]
+    then
+        controller=$1
+        file='controller.yaml'
+    else
+        controller=$2
+        file="$2-controller.yaml"
+    fi
+
+
+    result=$(kubectl apply -f $(_release_openstack_dir)/${1}/$file)
+
+    if [ $? -eq 0 ]
+    then
+        echo "Replication controller $controller successfully applied"
+    else
+        echo "Failed to apply replication controller $controller"
+        echo $result
+        exit 1
+    fi
+
+}
+
+apply_deployment(){
+
+
+    if [ -z "$2" ]
+    then
+        deployment=$1
+        file='deployment.yaml'
+    else
+        deployment=$2
+        file="$2-deployment.yaml"
+    fi
+
+
+    result=$(kubectl apply -f $(_release_openstack_dir)/${1}/$file)
+
+    if [ $? -eq 0 ]
+    then
+        echo "Deployment $deployment successfully applied"
+    else
+        echo "Failed to apply deployment $deployment"
+        echo $result
+        exit 1
+    fi
+
+}
+
+
+apply_daemonset(){
+    if [ -z "$2" ]
+    then
+        daemonset=$1
+        file="daemonset.yaml"
+    else
+        daemonset=$2
+        file="$2-daemonset.yaml"
+    fi
+
+    result=$(kubectl apply -f $(_release_openstack_dir)/${1}/$file)
+
+    if [ $? -eq 0 ]
+    then
+        echo "Daemonset $daemonset successfully applied"
+    else
+        echo "Failed to apply daemonset $daemonset"
+        echo $result
+        exit 1
+    fi
+
+
+}
+
+apply_from_specs_folder(){
+ for f in $(_release_openstack_dir)/${1}/*.yaml
+ do
+
+        file=${f##*/}
+
+        if [[ $file =~ \controller.yaml$ ]]
+        then
+            map_name=${file%-controller.yaml}
+            apply_replicationcontroller $1 $map_name
+        elif [[ $file =~ \daemonset.yaml$ ]]
+        then
+            map_name=${file%-daemonset.yaml}
+            apply_daemonset $1 $map_name
+        elif [[ $file =~ \deployment.yaml$ ]]
+        then
+            map_name=${file%-deployment.yaml}
+            apply_deployment $1 $map_name
+        fi
+ done
+}
+
+
+
+apply_seed_configmap(){
+    _apply_configmap $OPENSTACK_KUBE_SECRETS_PATH/clusters/$CLUSTER/seeds $1
+}
+
+
+
+apply_configmaps(){
+    kubectl apply -f $(_release_configmaps_dir)/$1
+}
+
+
+_apply_configmap(){
+    if [ -f ${1}/${2}-configmap.yaml ]
+    then
+      result=$(kubectl apply -f ${1}/${2}-configmap.yaml)
+
+      if [ $? -eq 0 ]
+      then
+          echo "configmap $2 successfully applied"
+      else
+          echo "Failed to apply configmap $2"
+          echo $result
+          exit 1
+      fi
+    fi
+}
+
+
+
+create_volume_claim (){
+    kubectl get persistentvolumeclaim | grep ${1} >/dev/null 2>&1
+
+    if [ $? -eq 0 ]
+    then
+        echo "$1 volume claim already exists, skipping create - you should expect this unless its an initial deployment"
+    else
+        result=$(kubectl create -f $(_release_volumes_dir)/volumes/${1}-pvclaim.yaml)
+
+        if [ $? -eq 0 ]
+        then
+            echo "Volume claim $1 successfully created"
+        else
+            echo "Failed to create volume claim $1"
+            echo $result
+            exit 1
+        fi
+    fi
+}
+
+
+apply_ingress(){
+    result=$(kubectl apply -f $(_release_openstack_dir)/${1}/ingress.yaml)
+
+    if [ $? -eq 0 ]
+    then
+        echo "Ingress $1 successfully applied"
+    else
+        echo "Failed to apply ingress $1"
+        echo $result
+        exit 1
+    fi
+
+}
+
+apply_component(){
+    apply_service $1
+    apply_deployment $1
+}
+
+ensure_node_labels(){
+    nodes="$OPENSTACK_KUBE_CONFIG_PATH/clusters/${CLUSTER}/release/config/labels"
+    if [ -f $nodes ]
+    then
+        echo "Preparing node labels"
+        while IFS=" " read -ra line; do
+           result=$(kubectl label node ${line[@]} --overwrite=true)
+
+           if [ $? -eq 0 ]
+           then
+               echo "Node labels : ${line[@]}"
+           else
+               echo "Failed to label node $node"
+               echo $result
+               exit 1
+           fi
+
+        done < $nodes
+    fi
+}

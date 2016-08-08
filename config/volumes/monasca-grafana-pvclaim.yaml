@@ -1,0 +1,15 @@
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: monasca-grafana-pvclaim
+  namespace: monasca
+  labels:
+    system: openstack
+    component: monitoring
+
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 1Gi           # datalogs per day allocate 1-10 Gi storage on staging

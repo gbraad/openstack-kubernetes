@@ -1,0 +1,12 @@
+kind: Service
+apiVersion: v1
+
+metadata:
+  name: operations
+  namespace: documentation
+
+spec:
+  selector:
+    name: operations
+  ports:
+    - port: 80

@@ -1,0 +1,119 @@
+kind: Deployment
+apiVersion: extensions/v1beta1
+
+metadata:
+  name: neutron-server
+  namespace: monsoon3
+  labels:
+    system: openstack
+    component: neutron
+  annotations:
+    kubernetes.io/change-cause: {{cluster_config['cluster.deployment.reason']}}
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 3
+  selector:
+    matchLabels:
+      name: neutron-server
+  template:
+    metadata:
+      labels:
+        name: neutron-server
+      annotations:
+        checksum/neutron.etc: {{checksums['neutron-etc-configmap.yaml']}}
+        checksum/neutron.bin: {{checksums['neutron-bin-configmap.yaml']}}
+    spec:
+      nodeSelector:
+        zone: farm
+      containers:
+        - name: neutron-server
+          image: {{cluster_config['cluster.image.repository']}}/{{cluster_config['cluster.image.namespace']}}/ubuntu-source-neutron-server-m3:{{cluster_config['image.version.neutron.server.m3']}}
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            privileged: true
+          command:
+            - /openstack-kube/openstack-kube/scripts/_container_init
+          args:
+            - neutron-server-start
+          livenessProbe:
+            httpGet:
+              path: /
+              port: {{cluster_config['neutron.api.port.internal']}}
+            initialDelaySeconds: 15
+            timeoutSeconds: 5
+          env:
+            - name: DEBUG_CONTAINER
+              value: "false"
+            - name: STATSD_HOST
+              value: "localhost"
+            - name: STATSD_PORT
+              value: "9125"
+            - name: SENTRY_DSN
+              valueFrom:
+                configMapKeyRef:
+                  name: cluster-config
+                  key: neutron.sentry.dsn
+          ports:
+            - name: neutron-api
+              containerPort: {{cluster_config['neutron.api.port.internal']}}
+          volumeMounts:
+            - mountPath: /development
+              name: development
+            - mountPath: /openstack-kube
+              name: openstack-kube
+            - mountPath: /cluster-config
+              name: cluster-config
+            - mountPath: /cluster-secret
+              name: cluster-secret
+            - mountPath: /neutron-etc
+              name: neutron-etc
+            - mountPath: /neutron-patches
+              name: neutron-patches
+            - mountPath: /f5-patches
+              name: f5-patches
+            - mountPath: /cisco-patches
+              name: cisco-patches
+            - mountPath: /container.init
+              name: container-init
+        - name: statsd
+          image: prom/statsd-exporter
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: statsd
+              containerPort: 9125
+              protocol: UDP
+            - name: metrics
+              containerPort: {{cluster_config['neutron.port.metrics']}}
+      volumes:
+        - name: openstack-kube
+          gitRepo:
+            repository: {{cluster_config['cluster.configuration.repository']}}
+            revision: {{cluster_config['cluster.configuration.revision']}}
+        - name: cluster-config
+          configMap:
+            name: cluster-config
+        - name: cluster-secret
+          secret:
+            secretName: cluster-secret
+        - name: neutron-etc
+          configMap:
+            name: neutron-etc
+        - name: neutron-patches
+          configMap:
+            name: neutron-patches
+        - name: f5-patches
+          configMap:
+            name: f5-patches
+        - name: cisco-patches
+          configMap:
+            name: cisco-patches
+        - name: development
+          persistentVolumeClaim:
+            claimName: development-pvclaim
+        - name: container-init
+          configMap:
+            name: neutron-bin

@@ -1,0 +1,12 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: share-netapp-bb98
+  labels:
+    system: openstack
+    component: configuration
+
+data:
+  backend.conf: |
+    {{config['manila/share-netapp-bb98.conf']}}

@@ -1,0 +1,17 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: barbican-bin
+  labels:
+    system: openstack
+    component: configuration
+
+data:
+  barbican-api-start: |
+    {{config['barbican/barbican-api-start']}}
+  common.sh: |
+    {{config['common.sh']}}
+
+
+

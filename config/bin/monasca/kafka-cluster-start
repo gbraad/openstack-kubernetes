@@ -1,0 +1,112 @@
+#!/bin/bash
+
+# set some env variables from the openstack env properly based on env
+. /monasca-common-start/common-start
+
+# filter attribute values for keys matching a certain name pattern
+function filter_attribute_values() { # $1: filename, $2: attribute key pattern
+  _filename=$1
+  _attr_filter=$2
+  _expr="^ *${_attr_filter} *(:|=>|=) *(.*)$"
+  _comment_line_filter='^[[:space:]]*$|^ *#'
+  _tail_comment_filter="s,(.*)#[^\"\']*,\1,g"
+  _filter="s,${_expr},\2,g"
+  cat "$_filename" | egrep -v "$_comment_line_filter" | egrep "$_expr" | sed -E "$_tail_comment_filter" | sed -E "$_filter" | sed "s,^['\"]\(.*\)['\"]$,\1,"
+}
+
+# common script used by different microservices to create their topics
+function create_or_update_topic() { # $1: topic, $2: replication factor=3
+  topic=$1
+  replication_factor=${2-3}
+  if ! (/opt/kafka/current/bin/kafka-topics.sh --describe --topic $topic --zookeeper $MONASCA_ZOOKEEPER_CLUSTER_URLS | grep -q "Topic: $topic"); then
+    echo -n "Topic $topic not found: creating "
+    while ! (/opt/kafka/current/bin/kafka-topics.sh --describe --topic $topic --zookeeper $MONASCA_ZOOKEEPER_CLUSTER_URLS | grep -q "Topic: $topic"); do
+      /opt/kafka/current/bin/kafka-topics.sh --create --topic $topic --partitions 1 --replication-factor $replication_factor --zookeeper $MONASCA_ZOOKEEPER_CLUSTER_URLS
+      sleep 60
+      echo -n "."
+    done
+    echo " done"
+  fi
+}
+
+function init_topics_from_config {
+  echo "Check and create Kafka topics from $1"
+  _topics=$(filter_attribute_values "$1" "$2")
+  for topic in $_topics; do
+    create_or_update_topic $topic 3
+  done
+}
+
+function init_monasca_topics {
+  create_or_update_topic "healthcheck" 1
+  init_topics_from_config ${CLUSTER_CONFIG_PATH}/monasca-api/api-config.yml ".*Topic"
+  init_topics_from_config ${CLUSTER_CONFIG_PATH}/monasca-notification/notification-config.yml ".*_topic"
+  init_topics_from_config ${CLUSTER_CONFIG_PATH}/monasca-notification/notification-config.yml "[0-9]+"
+  init_topics_from_config ${CLUSTER_CONFIG_PATH}/monasca-persister/persister.conf "topic"
+  init_topics_from_config ${CLUSTER_CONFIG_PATH}/monasca-storm-thresh/thresh-config.yml "topic"
+  init_topics_from_config ${CLUSTER_CONFIG_PATH}/monasca-log-api/log-api-config.conf ".*topics"
+  init_topics_from_config ${CLUSTER_CONFIG_PATH}/monasca-logstash/monasca-log-persister.conf "topic_id"
+  echo "Topics are available:"
+  /opt/kafka/current/bin/kafka-topics.sh --describe --zookeeper $MONASCA_ZOOKEEPER_CLUSTER_URLS
+}
+
+# this needs to be rethought, wehn we move over to a kafka cluster
+export CONFIG_DIR="${CLUSTER_CONFIG_PATH}/monasca-kafka-cluster"
+export CONFIG_FILE="${CONFIG_DIR}/server.properties"
+export KAFKA_ID=${KAFKA_ID:-1}
+export MONASCA_KAFKA_PORT_INTERNAL=${MONASCA_KAFKA_PORT_INTERNAL:-9092}
+export MONASCA_ZOOKEEPER_PORT_INTERNAL=${MONASCA_ZOOKEEPER_PORT_INTERNAL:-2181}
+
+# make sure Zookeeper is around
+echo -n "Check that Zookeeper is up ..."
+. /monasca-zookeeper-cluster-prereq/zookeeper-cluster-prereq
+echo " ok"
+
+# use defaults if no specific node configuration available
+cp $CONFIG_FILE /opt/kafka/current/config/server.properties
+cp $CONFIG_DIR/zookeeper.properties /opt/kafka/current/config/
+
+# if we are not on kubernetes, we do not need to set the advertised hostname (actually it will not work with it in plain docker)
+if [ "$KUBERNETES_PORT" = "" ]; then
+  sed -i 's,advertised.host.name=monasca-kafka,#advertised.host.name=monasca-kafka,g' /opt/kafka/current/config/server.properties
+fi
+
+# prepare configuration file
+export MONASCA_KAFKA_SERVER_VAR="MONASCA_KAFKA_SERVER_${KAFKA_ID}"
+# substitute placeholders
+sed -i "s,KAFKA_ID,$KAFKA_ID,g" /opt/kafka/current/config/server.properties
+sed -i "s,DELETE_TOPICS_ENABLED,$MONASCA_KAFKA_DELETE_TOPICS_ENABLED,g" /opt/kafka/current/config/server.properties
+sed -i "s,MONASCA_KAFKA_SERVER,${!MONASCA_KAFKA_SERVER_VAR},g" /opt/kafka/current/config/server.properties
+sed -i "s,MONASCA_KAFKA_PORT_INTERNAL,$MONASCA_KAFKA_PORT_INTERNAL,g" /opt/kafka/current/config/server.properties
+sed -i "s,MONASCA_ZOOKEEPER_PORT_INTERNAL,$MONASCA_ZOOKEEPER_PORT_INTERNAL,g" /opt/kafka/current/config/server.properties
+sed -i "s/MONASCA_ZOOKEEPER_CLUSTER_URLS/$MONASCA_ZOOKEEPER_CLUSTER_URLS/g" /opt/kafka/current/config/server.properties
+sed -i "s,MONASCA_ZOOKEEPER_PORT_INTERNAL,$MONASCA_ZOOKEEPER_PORT_INTERNAL,g" /opt/kafka/current/config/zookeeper.properties
+sed -i "s|log4j.logger.kafka=INFO, kafkaAppender|log4j.logger.kafka=WARN, stdout|g" /opt/kafka/current/config/log4j.properties
+sed -i "s|INFO|WARN|g" /opt/kafka/current/config/log4j.properties
+sed -i "s|log4j.logger.kafka.network.RequestChannel$=WARN, requestAppender|log4j.logger.kafka.network.RequestChannel$=WARN, stdout|g" /opt/kafka/current/config/log4j.properties
+sed -i "s|log4j.logger.kafka.request.logger=WARN, requestAppender|log4j.logger.kafka.request.logger=WARN, stdout|g" /opt/kafka/current/config/log4j.properties
+sed -i "s|log4j.logger.kafka.controller=TRACE, controllerAppender|log4j.logger.kafka.controller=WARN, stdout|g" /opt/kafka/current/config/log4j.properties
+sed -i "s|log4j.logger.kafka.log.LogCleaner=WARN, cleanerAppender|log4j.logger.kafka.log.LogCleaner=WARN, stdout|g" /opt/kafka/current/config/log4j.properties
+sed -i "s|log4j.logger.state.change.logger=TRACE, stateChangeAppender|log4j.logger.state.change.logger=WARN, stdout|g" /opt/kafka/current/config/log4j.properties
+
+# uncomment for debugging
+#sleep 30000
+
+# setup monasca agent after the process is up
+(sleep 60; /openstack-kube/openstack-kube/scripts/monasca/cfg-monasca-agent.sh) &
+
+# check and create topics after Kafka cluster has formed
+if [ $KAFKA_ID = 1 ]; then
+  (sleep 60; init_monasca_topics) &
+fi
+
+echo "Disk status"
+df
+
+echo "Start Kafka with lock /var/opt/kafka/.lock"
+chpst -v -L /var/opt/kafka/.lock /opt/kafka/current/bin/kafka-server-start.sh /opt/kafka/current/config/server.properties
+echo "Kafka could not be started: dump config"
+echo "server.properties --------------"
+cat /opt/kafka/current/config/server.properties
+echo "zookeeper.properties -----------"
+cat /opt/kafka/current/config/zookeeper.properties

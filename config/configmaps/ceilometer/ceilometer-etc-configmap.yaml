@@ -1,0 +1,24 @@
+metadata:
+  name: ceilometer-etc
+  labels:
+    system: openstack
+    service: metering
+    component: configuration
+
+data:
+  api_paste.ini: |
+    {{config['ceilometer/api_paste.ini']}}
+  ceilometer.conf: |
+    {{config['ceilometer/ceilometer.conf']}}
+  eu-de-1-target.crt: |
+    {{config['ceilometer/eu-de-1-target.crt']}}
+  event_definitions.yaml: |
+    {{config['ceilometer/event_definitions.yaml']}}
+  event_pipeline.yaml: |
+    {{config['ceilometer/event_pipeline.yaml']}}
+  pipeline.yaml: |
+    {{config['ceilometer/pipeline.yaml']}}
+  policy.json: |
+    {{config['ceilometer/policy.json']}}
+  staging-target.crt: |
+    {{config['ceilometer/taging-target.crt']}}

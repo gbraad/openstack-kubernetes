@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: monasca-grafana
+  namespace: monasca
+  labels:
+    system: openstack
+    service: monitoring
+spec:
+  selector:
+    component: monasca-grafana
+  ports:
+    - port: {{cluster_config['monasca.grafana.port.public']}}

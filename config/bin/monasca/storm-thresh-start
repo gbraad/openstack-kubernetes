@@ -1,0 +1,64 @@
+#!/bin/bash
+
+# set some env variables from the openstack env properly based on env
+. /monasca-common-start/common-start
+
+# check if the zookeeper is already around as we need it
+. /monasca-zookeeper-cluster-prereq/zookeeper-cluster-prereq
+
+# prepare list of ZK servers for use inside the YAML file
+MONASCA_ZOOKEEPER_SERVERS_YAML="[ \"$MONASCA_ZOOKEEPER_SERVER_1\""
+for i in $(seq 2 99); do
+  var="MONASCA_ZOOKEEPER_SERVER_${i}"
+  if [ ! -z ${!var} ]; then
+    MONASCA_ZOOKEEPER_SERVERS_YAML="${MONASCA_ZOOKEEPER_SERVERS_YAML}, \"${!var}\""
+  else
+    break
+  fi
+done
+MONASCA_ZOOKEEPER_SERVERS_YAML="${MONASCA_ZOOKEEPER_SERVERS_YAML} ]"
+
+# get the config monasca-thesh config file and replace with the secrets inside of it
+cp -f ${CLUSTER_CONFIG_PATH}/monasca-storm-thresh/thresh-config.yml /etc/monasca/
+cp -f ${CLUSTER_CONFIG_PATH}/monasca-storm-thresh/storm.yaml /opt/storm/current/conf/
+
+sed "s/MONASCA_MYSQL_PORT_INTERNAL/$MONASCA_MYSQL_PORT_INTERNAL/" -i /etc/monasca/thresh-config.yml
+sed "s/MONASCA_MYSQL_THRESH_PASSWORD/$MONASCA_MYSQL_THRESH_PASSWORD/" -i /etc/monasca/thresh-config.yml
+sed "s,KAFKA_CLIENT_ID,${KUBE_RC_NAME},g" -i /etc/monasca/thresh-config.yml
+sed "s,KAFKA_CONSUMER_ID,${KUBE_POD_NAME},g" -i /etc/monasca/thresh-config.yml
+sed "s/MONASCA_KAFKA_CLUSTER_URLS/$MONASCA_KAFKA_CLUSTER_URLS/g" -i /etc/monasca/thresh-config.yml
+sed "s/MONASCA_ZOOKEEPER_CLUSTER_URLS/$MONASCA_ZOOKEEPER_CLUSTER_URLS/g" -i /etc/monasca/thresh-config.yml
+sed "s/MONASCA_MYSQL_ENDPOINT_HOST_INTERNAL/$MONASCA_MYSQL_ENDPOINT_HOST_INTERNAL/g" -i /etc/monasca/thresh-config.yml
+sed "s/MONASCA_ZOOKEEPER_SERVERS_YAML/$MONASCA_ZOOKEEPER_SERVERS_YAML/g" -i /opt/storm/current/conf/storm.yaml
+sed "s/MONASCA_ZOOKEEPER_PORT_INTERNAL/$MONASCA_ZOOKEEPER_PORT_INTERNAL/g" -i /opt/storm/current/conf/storm.yaml
+
+# --------------------------------------------------
+# initiate the start sequence
+# fail on error
+set -e
+
+# Storm start script expect this to be set
+export PYTHON=/usr/bin/python2.7
+
+echo "Start nimbus"
+/opt/storm/current/bin/storm nimbus &
+NIMBUS_PID=$!
+sleep 5
+echo "Start supervisor"
+/opt/storm/current/bin/storm supervisor &
+SUPERVISOR_PID=$!
+# it seems like this needs some more time
+sleep 5
+echo "Start Monasca thresholder"
+/opt/storm/current/bin/storm jar /opt/monasca/monasca-thresh.jar monasca.thresh.ThresholdingEngine /etc/monasca/thresh-config.yml thresh-cluster
+THRESH_PID=$!
+
+# store PIDs for use by liveness check
+echo $NIMBUS_PID > /var/tmp/storm-nimbus.pid
+echo $THRESH_PID > /var/tmp/monasca-thresh.pid
+
+# setup monasca agent after the process is up
+(sleep 15; /openstack-kube/openstack-kube/scripts/monasca/cfg-monasca-agent.sh) &
+
+# keep running as long as the supervisor is running
+wait $SUPERVISOR_PID

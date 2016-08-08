@@ -1,0 +1,30 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: ceilometer-rabbitmq
+  namespace: ceilometer
+  labels:
+    system: openstack
+    component: metering
+spec:
+  ports:
+#    - name: nontls
+#      port: 5671
+#      protocol: TCP
+#      nodePort: 30074
+#    - name: tls
+#      port: 5672
+#      protocol: TCP
+#      nodePort: 30075
+#    - name: mgmt
+#      port: 15672
+#      protocol: TCP
+#      nodePort: 30076
+    - name: ceilometer-rabbitmq
+      port: {{cluster_config['ceilometer.rabbitmq.port.public']}}
+    - name: ceilometer-rabbitmq-mgmt
+      port: {{cluster_config['ceilometer.rabbitmq.port.mgmt']}}
+  externalIPs:
+    - {{cluster_config['ceilometer.external.ip']}}
+  selector:
+    component: ceilometer-rabbitmq

@@ -1,0 +1,14 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nova-patches
+  labels:
+    system: openstack
+    component: configuration
+
+data:
+  vif.diff: |
+    {{config['mitaka/nova/vif.diff']}}
+
+

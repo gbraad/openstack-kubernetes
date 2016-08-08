@@ -1,0 +1,15 @@
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: monasca-zookeeper-3-pvclaim
+  namespace: monasca
+  labels:
+    system: openstack
+    component: monitoring
+
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 50Gi           # datalogs per day allocate 1-10 Gi storage on staging

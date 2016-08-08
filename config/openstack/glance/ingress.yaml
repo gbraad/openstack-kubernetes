@@ -1,0 +1,21 @@
+apiVersion: extensions/v1beta1
+kind: Ingress
+
+metadata:
+  name: glance
+  namespace: monsoon3
+  labels:
+    system: openstack
+    component: gla
+spec:
+  tls:
+     - secretName: tls-{{cluster_config['glance.api.endpoint.host.public'].replace(".","-")}}
+       hosts: [{{cluster_config['glance.api.endpoint.host.public']}}]
+  rules:
+    - host: {{cluster_config['glance.api.endpoint.host.public']}}
+      http:
+        paths:
+        - path: /
+          backend:
+            serviceName: glance
+            servicePort: {{cluster_config['glance.api.port.internal']}}

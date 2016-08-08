@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+
+OPENSTACK_KUBE_SCRIPT_PATH=${0%/*}
+. $OPENSTACK_KUBE_SCRIPT_PATH/../common
+
+echo "Waiting for keystone application start up"
+
+URL_BASE=http://localhost:${KEYSTONE_API_PORT_ADMIN}
+
+n=1
+m=12
+until [ $n -ge $m ]
+do
+    sleep 10
+    curl $URL_BASE > /dev/null 2>&1  && break
+    echo "Attempt $n of $m waiting 10 seconds to retry"
+
+    n=$[$n+1]
+
+done
+
+if [ $n -eq $m ]
+then
+    echo "Keystone failed to startup within 120 seconds"
+    exit 1
+fi
+
+# seed just enough to have a functional v3 api
+export OS_BOOTSTRAP_USER=${KEYSTONE_BOOTSTRAP_USER}
+export OS_BOOTSTRAP_PASSWORD=${KEYSTONE_BOOTSTRAP_PASSWORD}
+export OS_BOOTSTRAP_REGION_ID=$CLUSTER_REGION
+export OS_BOOTSTRAP_ADMIN_URL=${KEYSTONE_API_ENDPOINT_PROTOCOL_ADMIN_EXT}://${KEYSTONE_API_ENDPOINT_HOST_ADMIN_EXT}:${KEYSTONE_API_PORT_ADMIN_EXT}/v3
+export OS_BOOTSTRAP_PUBLIC_URL=${KEYSTONE_API_ENDPOINT_PROTOCOL_PUBLIC}://${KEYSTONE_API_ENDPOINT_HOST_PUBLIC}:${KEYSTONE_API_PORT_PUBLIC}/v3
+export OS_BOOTSTRAP_INTERNAL_URL=${KEYSTONE_API_ENDPOINT_PROTOCOL_INTERNAL}://${KEYSTONE_API_ENDPOINT_HOST_INTERNAL}:${KEYSTONE_API_PORT_INTERNAL}/v3
+keystone-manage-extension --config-file /etc/keystone/keystone.conf bootstrap

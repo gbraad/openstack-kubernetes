@@ -1,0 +1,24 @@
+kind: Service
+apiVersion: v1
+
+metadata:
+  name: keystone-router
+  labels:
+    system: openstack
+    component: keystone-router
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "9145"
+
+spec:
+  type: NodePort
+  selector:
+    name: keystone-router
+  ports:
+    - name: public
+      port: 5000
+      targetPort: public
+    - name: admin
+      port: 35357
+      targetPort: admin
+  externalIPs: TODO 147.204.8.58?

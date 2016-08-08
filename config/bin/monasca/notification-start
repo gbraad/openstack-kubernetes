@@ -1,0 +1,26 @@
+#!/bin/bash
+
+# set some env variables from the openstack env properly based on env
+. /monasca-common-start/common-start
+
+# check if the zookeeper is already around as we need it
+. /monasca-zookeeper-cluster-prereq/zookeeper-cluster-prereq
+
+# get the config monasca-notification config file and replace with the secrets inside of it
+cp -f ${CLUSTER_CONFIG_PATH}/monasca-notification/notification-config.yml /etc/monasca/
+sed "s/MONASCA_MYSQL_NOTIFICATION_PASSWORD/$MONASCA_MYSQL_NOTIFICATION_PASSWORD/" -i /etc/monasca/notification-config.yml
+sed "s/MONASCA_LANDSCAPE/$CLUSTER_REGION/" -i /etc/monasca/notification-config.yml
+sed "s/MONASCA_KAFKA_CLUSTER_URLS/$MONASCA_KAFKA_CLUSTER_URLS/" -i /etc/monasca/notification-config.yml
+sed "s/MONASCA_ZOOKEEPER_CLUSTER_URLS/$MONASCA_ZOOKEEPER_CLUSTER_URLS/" -i /etc/monasca/notification-config.yml
+# uncommit these once the attributes are supported by notification compoennts (helps tracing back to clients)
+#sed "s,KAFKA_CLIENT_ID,${KUBE_RC_NAME},g" -i /etc/monasca/notification-config.yml
+#sed "s,KAFKA_CONSUMER_ID,${KUBE_POD_NAME},g" -i /etc/monasca/notification-config.yml
+
+# setup monasca agent after the process is up
+
+
+(sleep 15; /openstack-kube/openstack-kube/scripts/monasca/cfg-monasca-agent.sh) &
+
+/usr/share/python/monasca-notification/bin/monasca-notification /etc/monasca/notification-config.yml
+echo "Notification could not be started: dump config"
+cat /etc/monasca/notification-config.yml | grep -v "passwd" 

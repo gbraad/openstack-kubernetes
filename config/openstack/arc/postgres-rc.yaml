@@ -1,0 +1,39 @@
+kind: ReplicationController
+apiVersion: v1
+
+metadata:
+  name: postgres 
+  namespace: arc
+
+spec:
+  replicas: 1
+  selector:
+    name: postgres
+  template:
+    metadata:
+      labels:
+        name: postgres
+    spec:
+      nodeSelector:
+        zone: farm
+      volumes:
+        - name: postgres-persistent-storage
+          persistentVolumeClaim:
+            claimName: postgres
+      containers:
+        - name: postgres
+          image: docker.mo.sap.corp/monsoon/postgres:9.5 
+          env:
+            - name: PGDATA
+              value: /postgresql/data
+            - name: POSTGRES_PASSWORD 
+              valueFrom:
+                secretKeyRef:
+                  name: arc 
+                  key: arc.db.password 
+          ports:
+            - name: postgres
+              containerPort: 5432 
+          volumeMounts:
+            - name: postgres-persistent-storage
+              mountPath: /postgresql

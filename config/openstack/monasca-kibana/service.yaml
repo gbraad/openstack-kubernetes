@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: monasca-kibana
+  namespace: monasca
+  labels:
+    system: openstack
+    service: monitoring
+spec:
+  selector:
+    component: monasca-kibana
+  ports:
+    - port: {{cluster_config['monasca.kibana.port.public']}}

@@ -1,0 +1,17 @@
+kind: Service
+apiVersion: v1
+
+metadata:
+  name: mongodb
+  namespace: monsoon3
+  labels:
+    system: openstack
+    component: database
+spec:
+  type: NodePort
+  selector:
+    name: mongodb
+  ports:
+    - port: {{cluster_config['mongodb.port.public']}}
+  externalIPs:
+    - {{cluster_config['cluster.external.ip']}}

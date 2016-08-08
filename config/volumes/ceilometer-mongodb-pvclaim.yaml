@@ -1,0 +1,15 @@
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: ceilometer-mongodb-pvclaim
+  namespace: ceilometer
+  labels:
+    system: openstack
+    component: metering
+
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 100Gi

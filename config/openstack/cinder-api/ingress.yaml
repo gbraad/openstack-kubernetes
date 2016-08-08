@@ -1,0 +1,21 @@
+apiVersion: extensions/v1beta1
+kind: Ingress
+
+metadata:
+  name: cinder-api
+  namespace: monsoon3
+  labels:
+    system: openstack
+    component: cinder
+spec:
+  tls:
+     - secretName: tls-{{cluster_config['cinder.api.endpoint.host.public'].replace(".","-")}}
+       hosts: [{{cluster_config['cinder.api.endpoint.host.public']}}]
+  rules:
+    - host: {{cluster_config['cinder.api.endpoint.host.public']}}
+      http:
+        paths:
+        - path: /
+          backend:
+            serviceName: cinder-api
+            servicePort: {{cluster_config['cinder.api.port.internal']}}

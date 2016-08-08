@@ -1,0 +1,22 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ironic-bin
+  labels:
+    system: openstack
+    component: configuration
+
+data:
+  ironic-api-start: |
+    {{config['ironic/ironic-api-start']}}
+  ironic-conductor-start: |
+    {{config['ironic/ironic-conductor-start']}}
+  ironic-inspector-start: |
+    {{config['ironic/ironic-inspector-start']}}
+  ironic-pxe-start: |
+    {{config['ironic/ironic-pxe-start']}}
+  common.sh: |
+    {{config['common.sh']}}
+
+

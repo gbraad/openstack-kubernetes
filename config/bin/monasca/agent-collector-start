@@ -1,0 +1,12 @@
+#!/bin/bash
+
+# common initialization
+. /monasca-agent-start/agent-start
+
+# wait for forwarder to come up
+. /monasca-agent-forwarder-prereq/agent-forwarder-prereq
+# substitute PROMETHEUS URL
+PROMETHEUS_URL=http://prometheus.monitoring.svc.kubernetes.${CLUSTER_REGION}.cloud.sap:9090
+sed "s|PROMETHEUS_URL|${PROMETHEUS_URL}|g" -i /etc/monasca/agent/conf.d/prometheus.yaml 
+
+/usr/share/python/monasca-agent/bin/monasca-collector foreground

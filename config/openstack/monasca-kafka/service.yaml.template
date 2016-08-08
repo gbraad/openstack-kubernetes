@@ -1,0 +1,15 @@
+# replace {{component_config['nodeId']}} and {{component_config['nodeCount']}} with the actual ID (1..N) and count (N) of replicas/shards of the service
+apiVersion: v1
+kind: Service
+metadata:
+    name: monasca-kafka-{{component_config['nodeId']}}
+    namespace: monasca
+    labels:
+      system: openstack
+      service: monitoring
+spec:
+  ports:
+    - name: kafkacluster
+      port: {{cluster_config['monasca.kafka.port.internal']}}
+  selector:
+    component: monasca-kafka-{{component_config['nodeId']}}

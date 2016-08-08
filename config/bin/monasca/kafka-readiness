@@ -1,0 +1,4 @@
+#!/bin/bash
+
+set -e
+/monasca-zookeeper-cluster-prereq/zookeeper-cluster-prereq

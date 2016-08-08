@@ -1,0 +1,120 @@
+# replace {{component_config['nodeId']}} and {{component_config['nodeCount']}} with the actual ID (1..N) and count (N) of replicas/shards of the service
+apiVersion: v1
+kind: ReplicationController
+metadata:
+  name: monasca-es-data-{{component_config['nodeId']}}
+  namespace: monasca
+  labels:
+    system: openstack
+    service: monitoring
+    component: monasca-es-data-{{component_config['nodeId']}}
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        component: monasca-es-data-{{component_config['nodeId']}}
+    spec:
+      nodeSelector:
+        zone: farm
+      volumes:
+        - name: monasca-es-data-{{component_config['nodeId']}}-persistent-storage
+#          emptyDir: {}
+          persistentVolumeClaim:
+            claimName: monasca-es-data{{component_config['nodeId']}}-pvclaim
+        - name: openstack-kube
+          gitRepo:
+            repository: https://github.wdf.sap.corp/monsoon/openstack-kube.git
+            revision: master
+        - name: cluster-config
+          configMap:
+            name: cluster-config
+        - name: cluster-secret
+          secret:
+            secretName: cluster-secret
+      containers:
+        - name: monasca-es-data-{{component_config['nodeId']}}
+          image: docker.mo.sap.corp/monasca/monasca-elasticsearch:latest
+          imagePullPolicy: Always
+          command:
+            - dumb-init
+          args:
+            - /openstack-kube/openstack-kube/scripts/monasca-elasticsearch_start
+          securityContext:
+            capabilities:
+              add:
+                - IPC_LOCK
+          volumeMounts:
+            - mountPath: /data
+              name: monasca-es-data-{{component_config['nodeId']}}-persistent-storage
+            - mountPath: /openstack-kube
+              name: openstack-kube
+            - mountPath: /cluster-config
+              name: cluster-config
+            - mountPath: /cluster-secret
+              name: cluster-secret
+#          lifecycle:
+#            preStop:
+#              exec:
+#                command: ["/openstack-kube/openstack-kube/scripts/monasca-elasticsearch_stop"]
+#          livenessProbe:
+#            exec:
+#              command:
+#              - /openstack-kube/openstack-kube/scripts/monasca-elasticsearch_health
+#            timeoutSeconds: 30
+#            initialDelaySeconds: 120
+          env:
+            - name: KUBERNETES_CA_CERTIFICATE_FILE
+              value: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: "CLUSTER_NAME"
+              value: "monascaelasticsearch"
+            - name: NODE_MASTER
+              value: "false"
+            - name: HTTP_ENABLE
+              value: "true"
+          ports:
+            - containerPort: {{cluster_config['monasca.elasticsearch.port.cluster']}}
+              name: transport
+              protocol: TCP
+            - name: dummymasterport
+              hostPort: {{cluster_config['monasca.elasticsearch.data.dummy.port']}}
+              containerPort: {{cluster_config['monasca.elasticsearch.data.dummy.port']}}
+        - name: monasca-agent-forwarder
+          image: docker.mo.sap.corp/monasca/monasca-agent:latest
+          imagePullPolicy: Always
+          command:
+            - dumb-init
+          args:
+            - /openstack-kube/openstack-kube/scripts/monasca/agent-forwarder_start
+          ports:
+            - containerPort:  {{cluster_config['monasca.agent.port.forwarder']}}
+          volumeMounts:
+            - mountPath: /openstack-kube
+              name: openstack-kube
+            - mountPath: /cluster-config
+              name: cluster-config
+            - mountPath: /cluster-secret
+              name: cluster-secret
+        - name: monasca-agent-collector
+          image: docker.mo.sap.corp/monasca/monasca-agent:latest
+          imagePullPolicy: Always
+          command:
+            - dumb-init
+          args:
+            - /openstack-kube/openstack-kube/scripts/monasca/elasticsearch-agent-collector_start
+          volumeMounts:
+            - mountPath: /openstack-kube
+              name: openstack-kube
+            - mountPath: /cluster-config
+              name: cluster-config
+            - mountPath: /cluster-secret
+              name: cluster-secret
+          env:
+            - name: KUBE_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace

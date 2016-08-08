@@ -1,0 +1,217 @@
+--- l2_service.orig.py	2016-08-08 09:37:04.000000000 +0100
++++ l2_service.patch.py	2016-08-05 15:04:03.000000000 +0100
+@@ -135,8 +135,11 @@
+              self.conf.f5_common_external_networks)
+ 
+     def get_vlan_name(self, network, hostname):
++        segment = self._get_segment(network,'vlan')
++
++
+         # Construct a consistent vlan name
+-        net_key = network['provider:physical_network']
++        net_key = segment['provider:physical_network']
+         # look for host specific interface mapping
+         if net_key + ':' + hostname in self.interface_mapping:
+             interface = self.interface_mapping[net_key + ':' + hostname]
+@@ -151,18 +154,25 @@
+             tagged = self.tagging_mapping['default']
+ 
+         if tagged:
+-            vlanid = network['provider:segmentation_id']
++            vlanid = segment['provider:segmentation_id']
+         else:
+             vlanid = 0
+ 
+-        vlan_name = "vlan-" + \
+-                    str(interface).replace(".", "-") + \
+-                    "-" + str(vlanid)
+-        if len(vlan_name) > 15:
+-            vlan_name = 'vlan-tr-' + str(vlanid)
++        # vlan_name = "vlan-" + \
++        #              str(interface).replace(".", "-") + \
++        #             "-" + str(vlanid)
++        # if len(vlan_name) > 15:
++        #     vlan_name = 'vlan-tr-' + str(vlanid)
++
++        vlan_name = 'vlan-'+network['id'][0:10]
++
++
+         return vlan_name
+ 
+     def assure_bigip_network(self, bigip, network):
++        segment = self._get_segment(network,'vlan')
++
++
+         # Ensure bigip has configured network object
+         if not network:
+             LOG.error('    assure_bigip_network: '
+@@ -187,17 +197,17 @@
+             )
+ 
+         # setup all needed L2 network segments
+-        if network['provider:network_type'] == 'flat':
++        if segment['provider:network_type'] == 'flat':
+             self._assure_device_network_flat(network, bigip, network_folder)
+-        elif network['provider:network_type'] == 'vlan':
++        elif segment['provider:network_type'] == 'vlan':
+             self._assure_device_network_vlan(network, bigip, network_folder)
+-        elif network['provider:network_type'] == 'vxlan':
++        elif segment['provider:network_type'] == 'vxlan':
+             self._assure_device_network_vxlan(network, bigip, network_folder)
+-        elif network['provider:network_type'] == 'gre':
++        elif segment['provider:network_type'] == 'gre':
+             self._assure_device_network_gre(network, bigip, network_folder)
+         else:
+             error_message = 'Unsupported network type %s.' \
+-                            % network['provider:network_type'] + \
++                            % segment['provider:network_type'] + \
+                             ' Cannot setup network.'
+             LOG.error(error_message)
+             raise f5ex.InvalidNetworkType(error_message)
+@@ -207,12 +217,15 @@
+                       (time() - start_time))
+ 
+     def _assure_device_network_flat(self, network, bigip, network_folder):
++        segment = self._get_segment(network,'vlan')
++
++
+         # Ensure bigip has configured flat vlan (untagged)
+         interface = self.interface_mapping['default']
+         vlanid = 0
+ 
+         # Do we have host specific mappings?
+-        net_key = network['provider:physical_network']
++        net_key = segment['provider:physical_network']
+         if net_key + ':' + bigip.hostname in \
+                 self.interface_mapping:
+             interface = self.interface_mapping[
+@@ -243,6 +256,9 @@
+         self.network_helper.create_vlan(bigip, model)
+ 
+     def _assure_device_network_vlan(self, network, bigip, network_folder):
++        segment = self._get_segment(network,'vlan')
++
++
+         # Ensure bigip has configured tagged vlan
+         # VLAN names are limited to 64 characters including
+         # the folder name, so we name them foolish things.
+@@ -250,7 +266,7 @@
+         tagged = self.tagging_mapping['default']
+ 
+         # Do we have host specific mappings?
+-        net_key = network['provider:physical_network']
++        net_key = segment['provider:physical_network']
+         if net_key + ':' + bigip.hostname in \
+                 self.interface_mapping:
+             interface = self.interface_mapping[
+@@ -259,11 +275,15 @@
+                 net_key + ':' + bigip.hostname]
+         # Do we have a mapping for this network
+         elif net_key in self.interface_mapping:
++            LOG.error('*****************')
++
+             interface = self.interface_mapping[net_key]
+             tagged = self.tagging_mapping[net_key]
++            LOG.error(interface)
++            LOG.error(tagged)
+ 
+         if tagged:
+-            vlanid = network['provider:segmentation_id']
++            vlanid = segment['provider:segmentation_id']
+         else:
+             vlanid = 0
+ 
+@@ -286,6 +306,11 @@
+                  'partition': network_folder,
+                  'description': network['id'],
+                  'route_domain_id': network['route_domain_id']}
++
++        LOG.error('*****************')
++        LOG.error(network)
++        LOG.error(model)
++
+         self.network_helper.create_vlan(bigip, model)
+ 
+         if self.vlan_binding:
+@@ -417,7 +442,7 @@
+         # Wait for the VLAN to propagate to /Common on vCMP Guest
+         full_path_vlan_name = '/Common/' + prefixed(vlan['name'])
+         vlan_created = False
+-        v = bigip.tm.net.vlans.vlan
++        v = bigip.net.vlans.vlan
+         try:
+             for _ in range(0, 30):
+                 if v.exists(name=vlan['name'], partition='/Common'):
+@@ -451,6 +476,9 @@
+                      (full_path_vlan_name, vcmp_guest['mgmt_addr'], exc)))
+ 
+     def delete_bigip_network(self, bigip, network):
++
++        segment = self._get_segment(network,'vlan')
++
+         # Delete network on bigip
+         if network['id'] in self.conf.common_network_ids:
+             LOG.debug('skipping delete of common network %s'
+@@ -461,13 +489,13 @@
+         else:
+             network_folder = self.service_adapter.get_folder_name(
+                 network['tenant_id'])
+-        if network['provider:network_type'] == 'vlan':
++        if segment['provider:network_type'] == 'vlan':
+             self._delete_device_vlan(bigip, network, network_folder)
+-        elif network['provider:network_type'] == 'flat':
++        elif segment['provider:network_type'] == 'flat':
+             self._delete_device_flat(bigip, network, network_folder)
+-        elif network['provider:network_type'] == 'vxlan':
++        elif segment['provider:network_type'] == 'vxlan':
+             self._delete_device_vxlan(bigip, network, network_folder)
+-        elif network['provider:network_type'] == 'gre':
++        elif segment['provider:network_type'] == 'gre':
+             self._delete_device_gre(bigip, network, network_folder)
+         else:
+             LOG.error('Unsupported network type %s. Can not delete.'
+@@ -825,20 +853,24 @@
+ 
+     # Utilities
+     def get_network_name(self, bigip, network):
++
++        segment = self._get_segment(network,'vlan')
++
++
+         # This constructs a name for a tunnel or vlan interface
+         preserve_network_name = False
+         if network['id'] in self.conf.common_network_ids:
+             network_name = self.conf.common_network_ids[network['id']]
+             preserve_network_name = True
+-        elif network['provider:network_type'] == 'vlan':
++        elif segment['provider:network_type'] == 'vlan':
+             network_name = self.get_vlan_name(network,
+                                               bigip.hostname)
+-        elif network['provider:network_type'] == 'flat':
++        elif segment['provider:network_type'] == 'flat':
+             network_name = self.get_vlan_name(network,
+                                               bigip.hostname)
+-        elif network['provider:network_type'] == 'vxlan':
++        elif segment['provider:network_type'] == 'vxlan':
+             network_name = _get_tunnel_name(network)
+-        elif network['provider:network_type'] == 'gre':
++        elif segment['provider:network_type'] == 'gre':
+             network_name = _get_tunnel_name(network)
+         else:
+             error_message = 'Unsupported network type %s.' \
+@@ -847,3 +879,14 @@
+             LOG.error(error_message)
+             raise f5ex.InvalidNetworkType(error_message)
+         return network_name, preserve_network_name
++
++
++    def _get_segment(self,network,segment_type):
++        segments = network['segments']
++        for segment in segments:
++            LOG.error(_(segment))
++
++            if segment['provider:network_type']==segment_type:
++                LOG.error("Returning segment")
++                LOG.error(_(segment))
++                return segment
+\ No newline at end of file

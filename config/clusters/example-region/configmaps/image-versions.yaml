@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: image-versions
+  labels:
+    system: openstack
+    component: configuration
+
+data:
+  image.version.kolla.base: stable-mitaka
+  image.version.barbican.api.m3: stable-mitaka
+  image.version.glance.api.m3: stable-mitaka
+  image.version.nova.api.m3: stable-mitaka
+  image.version.cinder.api.m3: stable-mitaka
+  image.version.designate.api.m3: stable-mitaka
+  image.version.designate.central.m3: stable-mitaka
+  image.version.designate.mdns.m3: stable-mitaka
+  image.version.designate.poolmanager.m3: stable-mitaka
+  image.version.horizon.m3: stable-mitaka
+  image.version.keystone.m3: stable-mitaka
+  image.version.manila.api.m3: stable-mitaka
+  image.version.manila.scheduler.m3: stable-mitaka
+  image.version.manila.share.m3: stable-mitaka
+  image.version.neutron.server.m3: stable-mitaka
+  image.version.nova.compute.m3: stable-mitaka

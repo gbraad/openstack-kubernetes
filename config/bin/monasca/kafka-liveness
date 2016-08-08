@@ -1,0 +1,15 @@
+#!/bin/bash
+
+unset http_proxy https_proxy all_proxy
+
+. /var/tmp/zookeeper-cluster_prereq.rc
+
+# just list a single topic
+/opt/kafka/current/bin/kafka-topics.sh --list --topic healthcheck --zookeeper $MONASCA_ZOOKEEPER_CLUSTER_URLS > /dev/null
+if [ $? != 0 ]; then
+  echo "$(date --utc +'%Y-%m-%d %H:%M:%S.%3N') $$ ERROR $0 Kafka liveness check failed"
+  exit 1
+fi
+   
+#echo healthchecktest | /opt/kafka/current/bin/kafka-console-producer.sh --broker-list localhost:$KAFKA_PORT --topic healthcheck
+#/opt/kafka/current/bin/kafka-simple-consumer-shell.sh --broker-list localhost:$KAFKA_PORT --max-messages 1 --topic healthcheck --partition 0 --max-wait-ms 15000 | grep healthchecktest

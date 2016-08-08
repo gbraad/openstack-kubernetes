@@ -1,0 +1,13 @@
+function  install_dev {
+    cd /
+
+    echo "Installing from  https://${1}/${2}/${3}.git to $(pwd)"
+
+
+    git clone  -c http.sslVerify=false --depth 1 https://${1}/${2}/${3}.git
+
+    echo "Clone successful, running install script"
+
+    cd /${3} &&  python setup.py install
+
+}

@@ -1,0 +1,16 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: f5-patches
+  labels:
+    system: openstack
+    component: configuration
+
+data:
+  l2-service.diff: |
+    {{config['mitaka/f5/l2_service.diff']}}
+  loadbalancer-dbv2.diff: |
+    {{config['mitaka/f5/loadbalancer_dbv2.diff']}}
+
+

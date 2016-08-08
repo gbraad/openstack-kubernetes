@@ -1,0 +1,16 @@
+kind: Service
+apiVersion: v1
+
+metadata:
+  name: horizon
+  namespace: monsoon3
+  labels:
+    system: openstack
+    component: horizon
+spec:
+  type: NodePort
+  selector:
+    name: horizon
+  ports:
+    - name: http
+      port: {{cluster_config['horizon.port.http']}}

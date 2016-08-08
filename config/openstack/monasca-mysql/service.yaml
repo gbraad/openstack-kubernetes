@@ -1,0 +1,15 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: monasca-mysql
+  namespace: monasca
+  labels:
+    system: openstack
+    service: monitoring
+spec:
+  ports:
+    - name: mysql
+      port: {{cluster_config['monasca.mysql.port.internal']}}
+  selector:
+    component: monasca-mysql
+

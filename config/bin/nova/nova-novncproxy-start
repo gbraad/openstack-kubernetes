@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+
+. /container.init/common.sh
+
+function process_config {
+     cp /nova-etc/nova.conf  /etc/nova/nova.conf
+}
+
+
+
+function start_application {
+    exec /var/lib/kolla/venv/bin/nova-novncproxy
+
+}
+
+
+process_config
+start_application
+
+

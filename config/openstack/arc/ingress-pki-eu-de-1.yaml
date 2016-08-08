@@ -1,0 +1,17 @@
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: pki 
+  namespace: arc 
+spec:
+  tls:
+     - secretName: pki-ingress
+       hosts: [arc-pki.eu-de-1.cloud.sap]
+  rules:
+  - host: arc-pki.eu-de-1.cloud.sap
+    http:
+      paths:
+      - path: /
+        backend:
+          serviceName: pki 
+          servicePort: 80 

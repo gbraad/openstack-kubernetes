@@ -1,0 +1,16 @@
+kind: Service
+apiVersion: v1
+
+metadata:
+  name: ironic-api
+  namespace: monsoon3
+  labels:
+    system: openstack
+    component: ironic
+spec:
+  type: NodePort
+  selector:
+    name: ironic-api
+  ports:
+    - name: ironic-api
+      port: {{cluster_config['ironic.api.port.internal']}}

@@ -1,0 +1,61 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: influxdb_init
+  labels:
+    system: openstack
+    component: influxdb_init
+data:
+  influxdb_init: |
+#!/bin/bash
+
+API_URL="http://localhost:8086"
+
+#wait for the startup of influxdb
+RET=1
+while [ $RET -ne 0 ]; do
+   echo "Waiting for confirmation of InfluxDB service startup ..."
+   sleep 3
+   curl -k ${API_URL}/ping 2> /dev/null
+   RET=$?
+done
+
+# create cluster administrator
+root_user_created=$(curl -s -G -q -o /dev/null -w %{http_code} "${API_URL}/query?" --data-urlencode "q=CREATE USER root WITH PASSWORD '${MONASCA_INFLUXDB_ROOT_PASSWORD}' WITH ALL PRIVILEGES")
+if [ $root_user_created != 200 ]; then
+  root_user_created=$(curl -s -G -q -o /dev/null -w %{http_code} "${API_URL}/query?" -u root:${MONASCA_INFLUXDB_ROOT_PASSWORD} --data-urlencode "q=CREATE USER root WITH PASSWORD '${MONASCA_INFLUXDB_ROOT_PASSWORD}' WITH ALL PRIVILEGES")
+  if [ $root_user_created != 200 ]; then
+    echo "Cluster administrator 'root' could not be created: $root_user_created"
+    exit 1
+  fi
+fi
+
+# create cluster administrator
+monitoring_user_created=$(curl -s -G -q -o /dev/null -w %{http_code} "${API_URL}/query?" -u root:${MONASCA_INFLUXDB_ROOT_PASSWORD} --data-urlencode "q=CREATE USER monitoring WITH PASSWORD '${MONASCA_INFLUXDB_MONITORING_PASSWORD}' WITH ALL PRIVILEGES")
+if [ $monitoring_user_created != 200 ]; then
+  echo "Cluster self-monitoring 'monitoring' could not be created: $monitoring_user_created"
+  exit 1
+fi
+
+# now create monasca specific database
+db_created=$(curl -s -q -o /dev/null -w %{http_code} -G "${API_URL}/query?" -u root:${MONASCA_INFLUXDB_ROOT_PASSWORD} --data-urlencode "q=CREATE DATABASE IF NOT EXISTS mon WITH DURATION 31d REPLICATION 1 NAME monasca")
+if [ $db_created != 200 ]; then
+  echo "Database could not be created: $db_created"
+  exit 1
+fi
+
+mon_api_user_created=$(curl -s -G -q -o /dev/null -w %{http_code} "${API_URL}/query?" -u root:${MONASCA_INFLUXDB_ROOT_PASSWORD} --data-urlencode "q=CREATE USER mon_api WITH PASSWORD '${MONASCA_INFLUXDB_MONAPI_PASSWORD}'; GRANT ALL ON mon TO mon_api")
+if [ $mon_api_user_created != 200 ]; then
+  echo "Database user 'mon_api' could not be created: $mon_api_user_created"
+  exit 1
+fi
+
+mon_persister_user_created=$(curl -s -G -q -o /dev/null -w %{http_code} "${API_URL}/query?" -u root:${MONASCA_INFLUXDB_ROOT_PASSWORD} --data-urlencode "q=CREATE USER mon_persister WITH PASSWORD '${MONASCA_INFLUXDB_MONPERSISTER_PASSWORD}'; GRANT WRITE ON mon TO mon_persister")
+if [ $mon_persister_user_created != 200 ]; then
+  echo "Database user 'mon_persister' could not be created: $mon_persister_user_created"
+  exit 1
+fi
+
+# successful
+echo "Monasca environment successfully prepared"
+date --utc > ${MONASCA_INFLUXDB_PREP_FILE}

@@ -1,0 +1,70 @@
+kind: Deployment
+apiVersion: extensions/v1beta1
+
+metadata:
+  name: ironic-inspector
+  namespace: monsoon3
+  labels:
+    system: openstack
+    component: ironic
+  annotations:
+    kubernetes.io/change-cause: {{cluster_config['cluster.deployment.reason']}}
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 3
+  selector:
+    matchLabels:
+      name: ironic-inspector
+  template:
+    metadata:
+      labels:
+        name: ironic-inspector
+      annotations:
+        checksum/ironic.etc: {{checksums['ironic-etc-configmap.yaml']}}
+        checksum/ironic.bin: {{checksums['ironic-bin-configmap.yaml']}}
+    spec:
+      nodeSelector:
+        zone: farm
+      containers:
+        - name: ironic-inspector
+          image: {{cluster_config['cluster.image.repository']}}/{{cluster_config['cluster.image.namespace']}}/ubuntu-source-ironic-inspector:{{cluster_config['image.version.kolla.base']}}
+          imagePullPolicy: IfNotPresent
+          command:
+            - /openstack-kube/openstack-kube/scripts/_container_init
+          args:
+            - ironic-inspector-start
+          env:
+            - name: DEBUG_CONTAINER
+              value: "true"
+          volumeMounts:
+            - mountPath: /openstack-kube
+              name: openstack-kube
+            - mountPath: /ironic-etc
+              name: ironic-etc
+            - mountPath: /cluster-config
+              name: cluster-config
+            - mountPath: /cluster-secret
+              name: cluster-secret
+            - mountPath: /container.init
+              name: container-init
+      volumes:
+        - name: openstack-kube
+          gitRepo:
+            repository: {{cluster_config['cluster.configuration.repository']}}
+            revision: {{cluster_config['cluster.configuration.revision']}}
+        - name: ironic-etc
+          configMap:
+            name: ironic-etc
+        - name: cluster-config
+          configMap:
+            name: cluster-config
+        - name: cluster-secret
+          secret:
+            secretName: cluster-secret
+        - name: container-init
+          configMap:
+            name: ironic-bin

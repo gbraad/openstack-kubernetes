@@ -1,0 +1,20 @@
+kind: Service
+apiVersion: v1
+
+metadata:
+  name: designate-central
+  namespace: monsoon3
+  labels:
+    system: openstack
+    component: designate
+spec:
+  type: NodePort
+  selector:
+    name: designate-central
+#  ports:
+#    - name: designate-central
+#      port: {{cluster_config['designate.central.port.public']}}
+#    - name: designate-metadata
+#      port: {{cluster_config['designate.metadata.port.public']}}
+  externalIPs:
+    - {{cluster_config['cluster.external.ip']}}

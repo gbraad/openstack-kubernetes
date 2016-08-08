@@ -1,0 +1,130 @@
+kind: Deployment
+apiVersion: extensions/v1beta1
+
+metadata:
+  name: neutron-f5-agent
+  namespace: monsoon3
+  labels:
+    system: openstack
+    component: neutron
+  annotations:
+    kubernetes.io/change-cause: {{cluster_config['cluster.deployment.reason']}}
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 3
+  selector:
+    matchLabels:
+      name: neutron-f5-agent
+  template:
+    metadata:
+      labels:
+        name: neutron-f5-agent
+      annotations:
+        pod.beta.kubernetes.io/hostname:  f5-pet
+        checksum/neutron.etc: {{checksums['neutron-etc-configmap.yaml']}}
+        checksum/neutron.bin: {{checksums['neutron-bin-configmap.yaml']}}
+    spec:
+      nodeSelector:
+        zone: farm
+      containers:
+        - name: neutron-f5-agent
+          image: {{cluster_config['cluster.image.repository']}}/{{cluster_config['cluster.image.namespace']}}/ubuntu-source-neutron-server-m3:{{cluster_config['image.version.neutron.server.m3']}}
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            privileged: true
+          command:
+            - /openstack-kube/openstack-kube/scripts/_container_init
+          args:
+            - neutron-f5-agent-start
+          livenessProbe:
+            exec:
+              command:
+              - /openstack-kube/openstack-kube/scripts/liveness-checks/neutron/service-liveness-check
+              - --config-file=/etc/neutron/neutron.conf
+              - --config-file=/openstack-kube/openstack-kube/scripts/liveness-checks/neutron/f5-oslbaasv2-liveness.conf
+            initialDelaySeconds: 30
+            timeoutSeconds: 10
+            periodSeconds: 30
+            failureThreshold: 2
+          env:
+            - name: DEBUG_CONTAINER
+              value: "false"
+          volumeMounts:
+            - mountPath: /openstack-kube
+              name: openstack-kube
+            - mountPath: /cluster-config
+              name: cluster-config
+            - mountPath: /cluster-secret
+              name: cluster-secret
+            - mountPath: /neutron-etc
+              name: neutron-etc
+            - mountPath: /f5-patches
+              name: f5-patches
+            - mountPath: /container.init
+              name: container-init
+        - name: neutron-f5-ml2-agent
+          image: {{cluster_config['cluster.image.repository']}}/{{cluster_config['cluster.image.namespace']}}/ubuntu-source-neutron-server-m3:{{cluster_config['image.version.neutron.server.m3']}}
+          imagePullPolicy: Always
+          securityContext:
+            privileged: true
+          env:
+            - name: OS_HOSTNAME
+              value: f5-pet
+          command:
+            - /openstack-kube/openstack-kube/scripts/_container_init
+          args:
+            - neutron-f5-ml2-agent-start
+          livenessProbe:
+            exec:
+              command:
+              - /openstack-kube/openstack-kube/scripts/liveness-checks/neutron/service-liveness-check
+              - --config-file=/etc/neutron/neutron.conf
+              - --config-file=/openstack-kube/openstack-kube/scripts/liveness-checks/neutron/f5-agent-liveness.conf
+            initialDelaySeconds: 30
+            timeoutSeconds: 10
+            periodSeconds: 30
+            failureThreshold: 2
+          env:
+            - name: DEBUG_CONTAINER
+              value: "false"
+          volumeMounts:
+            - mountPath: /development
+              name: development
+            - mountPath: /openstack-kube
+              name: openstack-kube
+            - mountPath: /neutron-etc
+              name: neutron-etc
+            - mountPath: /cluster-config
+              name: cluster-config
+            - mountPath: /cluster-secret
+              name: cluster-secret
+            - mountPath: /container.init
+              name: container-init
+      volumes:
+        - name: openstack-kube
+          gitRepo:
+            repository: {{cluster_config['cluster.configuration.repository']}}
+            revision: {{cluster_config['cluster.configuration.revision']}}
+        - name: neutron-etc
+          configMap:
+            name: neutron-etc
+        - name: f5-patches
+          configMap:
+            name: f5-patches
+        - name: cluster-config
+          configMap:
+            name: cluster-config
+        - name: cluster-secret
+          secret:
+            secretName: cluster-secret
+        - name: development
+          persistentVolumeClaim:
+            claimName: development-pvclaim
+        - name: container-init
+          configMap:
+            name: neutron-bin
+

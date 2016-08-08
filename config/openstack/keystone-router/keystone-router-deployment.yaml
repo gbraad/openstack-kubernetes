@@ -1,0 +1,74 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+
+metadata:
+  name: keystone-router
+
+spec:
+  replicas: 3
+  minReadySeconds: 5
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 3
+  selector:
+    matchLabels:
+      name: keystone-router
+  template:
+    metadata:
+      labels:
+        name: keystone-router
+    spec:
+      nodeSelector:
+        zone: farm
+      volumes:
+        - name: nginx-conf
+          gitRepo:
+            repository: https://github.wdf.sap.corp/monsoon/monsoon-keystone-router-k8s-config.git
+            revision: master
+            directory: '.'
+        - name: keystone-router-conf
+          configMap:
+            name: keystone-router-config
+            items:
+            - key: config
+              path: config.lua
+        - name: certificates
+          secret:
+            secretName: certificates
+      containers:
+        - name: keystone-router
+          image: docker.mo.sap.corp/monsoon/monsoon-keystone-router:build.latest
+          imagePullPolicy: Always
+          # command: ["/bin/sleep", "600"]
+          lifecycle:
+            preStop:
+              exec:
+                command: ["/usr/sbin/nginx","-s","quit"]
+          volumeMounts:
+            - name: nginx-conf
+              mountPath: /etc/nginx
+            - name: keystone-router-conf
+              mountPath: /etc/keystone-router
+            - name: certificates
+              mountPath: /etc/certificates
+          ports:
+            - name: public
+              containerPort: 30005
+            - name: admin
+              containerPort: 30006
+          livenessProbe:
+            httpGet:
+              scheme: HTTPS
+              path: /v3
+              port: public
+            initialDelaySeconds: 5
+            timeoutSeconds: 1
+          readinessProbe:
+            httpGet:
+              scheme: HTTPS
+              path: /v3
+              port: public
+            initialDelaySeconds: 5
+            timeoutSeconds: 1

@@ -1,0 +1,79 @@
+kind: Deployment
+apiVersion: extensions/v1beta1
+
+metadata:
+  name: nova-scheduler
+  namespace: monsoon3
+  labels:
+    system: openstack
+    component: nova
+  annotations:
+    kubernetes.io/change-cause: {{cluster_config['cluster.deployment.reason']}}
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 3
+  selector:
+    matchLabels:
+      name: nova-scheduler
+  template:
+    metadata:
+      labels:
+        name: nova-scheduler
+      annotations:
+        checksum/nova.etc: {{checksums['nova-etc-configmap.yaml']}}
+        checksum/nova.bin: {{checksums['nova-bin-configmap.yaml']}}
+
+
+    spec:
+      nodeSelector:
+        zone: farm
+      containers:
+        - name: nova-scheduler
+          image: {{cluster_config['cluster.image.repository']}}/{{cluster_config['cluster.image.namespace']}}/ubuntu-source-nova-scheduler:{{cluster_config['image.version.kolla.base']}}
+          imagePullPolicy: IfNotPresent
+          command:
+            - /openstack-kube/openstack-kube/scripts/_container_init
+          args:
+            - nova-scheduler-start
+          livenessProbe:
+            exec:
+              command:
+              - /openstack-kube/openstack-kube/scripts/liveness-checks/nova/service-liveness-check
+              - --config-file=/etc/nova/nova.conf
+              - --config-file=/openstack-kube/openstack-kube/scripts/liveness-checks/nova/scheduler-liveness.conf
+            initialDelaySeconds: 30
+            timeoutSeconds: 10
+            periodSeconds: 30
+            failureThreshold: 2
+          volumeMounts:
+            - mountPath: /openstack-kube
+              name: openstack-kube
+            - mountPath: /cluster-config
+              name: cluster-config
+            - mountPath: /cluster-secret
+              name: cluster-secret
+            - mountPath: /nova-etc
+              name: nova-etc
+            - mountPath: /container.init
+              name: container-init
+      volumes:
+        - name: openstack-kube
+          gitRepo:
+            repository: {{cluster_config['cluster.configuration.repository']}}
+            revision: {{cluster_config['cluster.configuration.revision']}}
+        - name: cluster-config
+          configMap:
+            name: cluster-config
+        - name: cluster-secret
+          secret:
+            secretName: cluster-secret
+        - name: nova-etc
+          configMap:
+            name: nova-etc
+        - name: container-init
+          configMap:
+            name: nova-bin

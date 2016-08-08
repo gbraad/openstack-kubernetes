@@ -1,0 +1,19 @@
+apiVersion: extensions/v1beta1
+kind: Ingress
+
+metadata:
+  name: monasca-grafana
+  namespace: monasca
+
+spec:
+  tls:
+     - secretName: tls-{{cluster_config['monasca.grafana.endpoint.host.public'].replace(".","-")}}
+       hosts: [{{cluster_config['monasca.grafana.endpoint.host.public']}}]
+  rules:
+    - host: {{cluster_config['monasca.grafana.endpoint.host.public']}} 
+      http:
+        paths:
+        - path: /
+          backend:
+            serviceName: monasca-grafana
+            servicePort: {{cluster_config['monasca.grafana.port.public']}}

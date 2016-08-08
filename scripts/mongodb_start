@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+
+CLUSTER_SCRIPT_PATH=${0%/*}
+. $CLUSTER_SCRIPT_PATH/common
+
+function process_config {
+    $CLUSTER_SCRIPT_PATH/tools/process_config $CLUSTER_CONFIG_PATH/mongodb/mongodb.conf  > /etc/mongodb.conf
+}
+
+
+
+
+function start_application {
+
+    /usr/bin/mongod --unixSocketPrefix=/var/run/mongodb --config /etc/mongodb.conf run
+
+}
+
+
+process_config
+start_application
+
+

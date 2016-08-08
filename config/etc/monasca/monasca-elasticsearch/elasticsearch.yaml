@@ -1,0 +1,50 @@
+cloud:
+  kubernetes:
+    service: monasca-es-master
+    namespace: ${{cluster_config['namespace']}}
+
+node:
+  master: ${{cluster_config['node_master']}}
+  data: ${{cluster_config['node_data']}}
+
+path:
+  data: /data/data
+  logs: /data/log
+  plugins: /elasticsearch/plugins
+  work: /data/work
+
+
+security.manager.enabled: false
+
+network.host: 0.0.0.0
+http.enabled: ${{cluster_config['http_enable']}}
+http.max_content_length: 500mb
+
+discovery:
+    type: kubernetes
+
+discovery.zen.minimum_master_nodes: 2
+
+readonlyrest:
+    enable: true
+    response_if_req_forbidden: <h1>Forbidden</h1>    
+    access_control_rules:
+
+    - name: Demo (read only)
+      type: allow
+      kibana_access: ro
+      auth_key: demo:demo
+
+    - name: Monsoon (read only, but can create dashboards)
+      type: allow
+      kibana_access: ro+
+      auth_key: monsoon:monsoon
+
+    - name: Admin (read write)
+      type: allow
+      kibana_access: rw
+      auth_key: ${{cluster_config['monasca_elasticsearch_user']}}:${{cluster_config['monasca_elasticsearch_password']}}
+
+    - name: data
+      type: allow
+      auth_key: ${{cluster_config['monasca_elasticsearch_user']}}:${{cluster_config['monasca_elasticsearch_password']}}

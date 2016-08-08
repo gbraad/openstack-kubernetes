@@ -1,0 +1,14 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: barbican-etc
+  labels:
+    system: openstack
+    component: configuration
+
+data:
+  barbican.conf: |
+    {{config['barbican/barbican.conf']}}
+  barbican-api-paste.ini: |
+    {{config['barbican/barbican-api-paste.ini']}}

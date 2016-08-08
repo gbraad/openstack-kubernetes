@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+
+
+
+. /container.init/common.sh
+
+
+
+function prepare_system {
+
+    modprobe -r openvswitch
+
+    modprobe openvswitch
+
+    mkdir -p "/var/run/openvswitch"
+
+    rm -rf /etc/openvswitch/conf.db
+    ovsdb-tool create "/etc/openvswitch/conf.db"
+}
+
+
+
+
+
+function _start_application {
+
+
+    exec /usr/sbin/ovsdb-server /etc/openvswitch/conf.db -vconsole:emer -vsyslog:err -vfile:info --remote=punix:/var/run/openvswitch/db.sock --pidfile=/var/run/openvswitch/ovsdb-server.pid
+
+}
+
+prepare_system
+
+start_application
+

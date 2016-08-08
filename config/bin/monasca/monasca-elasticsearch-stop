@@ -1,0 +1,22 @@
+#!/bin/bash
+
+# set some env variables from the openstack env properly based on env
+. /container.init/common.sh
+
+function stop_application {
+
+  # set environment
+  export CLUSTER_NAME=${CLUSTER_NAME:-default}
+  export NODE_MASTER=${NODE_MASTER:-true}
+  export NODE_DATA=${NODE_DATA:-true}
+  export HTTP_ENABLE=${HTTP_ENABLE:-true}
+  export MULTICAST=${MULTICAST:-true}
+  export MULTICAST=${NAMESPACE:-default}
+  
+  unset http_proxy https_proxy all_proxy no_proxy ftp_proxy
+
+  curl -u ${MONASCA_ELASTICSEARCH_USER}:${MONASCA_ELASTICSEARCH_PASSWORD} -XPUT localhost:9200/_cluster/settings -d '{"transient": { "cluster.routing.allocation.enable": "none" } }'
+
+}
+
+stop_application

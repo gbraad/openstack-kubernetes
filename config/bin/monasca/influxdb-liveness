@@ -1,0 +1,8 @@
+#!/bin/bash
+
+# set some env variables from the openstack env properly based on env
+. /influxdb_liveness.rc 
+
+# check if the mon database exists
+curl -q -G http://localhost:8086/query --data-urlencode "u=" --data-urlencode "p=$MONASCA_INFLUXDB_ROOT_PASSWORD" --data-urlencode "q=show databases" | grep -q ""mon""
+CHECKRESULT=$?

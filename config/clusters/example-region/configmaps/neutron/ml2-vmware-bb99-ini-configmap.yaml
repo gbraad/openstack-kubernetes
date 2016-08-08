@@ -1,0 +1,12 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ml2-vmware-bb99-ini
+  labels:
+    system: openstack
+    component: configuration
+
+data:
+  ml2-vmware.ini: |
+    {{config['neutron/ml2-vmware-bb99.ini']}}

@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+
+OPENSTACK_KUBE_ROOT_PATH=${0%/*}/..
+OPENSTACK_KUBE_SCRIPT_PATH=${OPENSTACK_KUBE_ROOT_PATH}/scripts
+OPENSTACK_KUBE_CONFIG_PATH=${OPENSTACK_KUBE_ROOT_PATH}/config
+
+
+
+. $OPENSTACK_KUBE_SCRIPT_PATH/kube_functions/kube_functions
+
+if   [ -z "$1" ] ||  [ -z "$2" ] || [ $1 = "--help" ]
+then
+    echo
+    echo "Usage: "
+    echo "      os-teardown [namespace] [cluster]"
+    exit 0
+fi
+
+echo
+read -p "Do you really want to teardown the Openstack control plane $1 $2 Y/N? " -n 1 -r
+echo    # (optional) move to a new line
+if [[ ! $REPLY =~ ^[Yy]$ ]]
+then
+    exit 1
+fi
+
+NAMESPACE=$1
+CLUSTER=$2
+CONTEXT=${NAMESPACE}-${CLUSTER}
+
+echo "Starting teardown of cluster $CLUSTER in namespace $NAMESPACE"
+
+use_context $CONTEXT
+
+kubectl delete replicationcontroller --selector=system=openstack --grace-period=0
+kubectl delete daemonset --selector=system=openstack --grace-period=0
+kubectl delete deployment --selector=system=openstack --grace-period=0
+
+kubectl delete service --selector=system=openstack
+kubectl delete ingress --selector=system=openstack
+
+kubectl delete secret --selector=system=openstack
+kubectl delete configmap --selector=system=openstack

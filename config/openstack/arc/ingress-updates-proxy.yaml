@@ -1,0 +1,31 @@
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: updates-proxy 
+  namespace: arc 
+spec:
+  tls:
+     - secretName: updates-proxy 
+       hosts: [stable.arc.eu-de-1.cloud.sap, beta.arc.eu-de-1.cloud.sap, alpha.arc.eu-de-1.cloud.sap]
+  rules:
+  - host: stable.arc.eu-de-1.cloud.sap 
+    http:
+      paths:
+      - path: /
+        backend:
+          serviceName: updates-proxy 
+          servicePort: 80 
+  - host: beta.arc.eu-de-1.cloud.sap 
+    http:
+      paths:
+      - path: /
+        backend:
+          serviceName: updates-proxy 
+          servicePort: 80 
+  - host: alpha.arc.eu-de-1.cloud.sap 
+    http:
+      paths:
+      - path: /
+        backend:
+          serviceName: updates-proxy 
+          servicePort: 80 

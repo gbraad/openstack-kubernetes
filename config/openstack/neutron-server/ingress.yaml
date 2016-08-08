@@ -1,0 +1,21 @@
+apiVersion: extensions/v1beta1
+kind: Ingress
+
+metadata:
+  name: neutron-server
+  namespace: monsoon3
+  labels:
+    system: openstack
+    component: neutron
+spec:
+  tls:
+     - secretName: tls-{{cluster_config['neutron.api.endpoint.host.public'].replace(".","-")}}
+       hosts: [{{cluster_config['neutron.api.endpoint.host.public']}}]
+  rules:
+    - host: {{cluster_config['neutron.api.endpoint.host.public']}}
+      http:
+        paths:
+        - path: /
+          backend:
+            serviceName: neutron-server
+            servicePort: {{cluster_config['neutron.api.port.internal']}}

@@ -1,0 +1,16 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: glance-etc
+  labels:
+    system: openstack
+    component: configuration
+
+data:
+  glance-api.conf: |
+    {{config['glance/glance-api.conf']}}
+  glance-registry.conf: |
+    {{config['glance/glance-registry.conf']}}
+  swift-store.conf: |
+    {{config['glance/swift-store.conf']}}

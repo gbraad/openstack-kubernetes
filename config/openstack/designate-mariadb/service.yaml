@@ -1,0 +1,16 @@
+kind: Service
+apiVersion: v1
+
+metadata:
+  name: designate-mariadb
+  namespace: monsoon3
+  labels:
+    system: openstack
+    component: designate
+spec:
+  type: NodePort
+  selector:
+    app: designate-mariadb
+  ports:
+    - name: designate-mariadb
+      port: {{cluster_config['mysql.port.public']}}

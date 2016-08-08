@@ -1,0 +1,70 @@
+kind: Deployment
+apiVersion: extensions/v1beta1
+
+metadata:
+  name: manila-scheduler
+  namespace: monsoon3
+  labels:
+    system: openstack
+    component: manila
+  annotations:
+    kubernetes.io/change-cause: {{cluster_config['cluster.deployment.reason']}}
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 3
+  selector:
+    matchLabels:
+      name: manila-scheduler
+  template:
+    metadata:
+      labels:
+        name: manila-scheduler
+      annotations:
+        checksum/manila.etc: {{checksums['manila-etc-configmap.yaml']}}
+        checksum/manila.bin: {{checksums['manila-bin-configmap.yaml']}}
+    spec:
+      nodeSelector:
+        zone: farm
+      containers:
+        - name: manila-scheduler
+          image: {{cluster_config['cluster.image.repository']}}/{{cluster_config['cluster.image.namespace']}}/ubuntu-source-manila-scheduler-m3:{{cluster_config['image.version.manila.scheduler.m3']}}
+          imagePullPolicy: IfNotPresent
+          command:
+            - /openstack-kube/openstack-kube/scripts/_container_init
+          args:
+            - manila-scheduler-start
+          env:
+            - name: DEBUG_CONTAINER
+              value: "false"
+          volumeMounts:
+            - mountPath: /manila-etc
+              name: manila-etc
+            - mountPath: /openstack-kube
+              name: openstack-kube
+            - mountPath: /cluster-config
+              name: cluster-config
+            - mountPath: /cluster-secret
+              name: cluster-secret
+            - mountPath: /container.init
+              name: container-init
+      volumes:
+        - name: openstack-kube
+          gitRepo:
+            repository: {{cluster_config['cluster.configuration.repository']}}
+            revision: {{cluster_config['cluster.configuration.revision']}}
+        - name: manila-etc
+          configMap:
+            name: manila-etc
+        - name: cluster-config
+          configMap:
+            name: cluster-config
+        - name: cluster-secret
+          secret:
+            secretName: cluster-secret
+        - name: container-init
+          configMap:
+            name: manila-bin

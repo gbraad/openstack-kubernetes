@@ -1,0 +1,14 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: barbican-patches
+  labels:
+    system: openstack
+    component: configuration
+
+data:
+  barbican-api.diff: |
+    {{config['mitaka/barbican/barbican-api.diff']}}
+
+

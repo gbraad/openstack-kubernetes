@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+
+
+. /container.init/common.sh
+
+function process_config {
+    cp /cinder-etc/cinder.conf /etc/cinder/cinder.conf
+}
+
+
+
+function start_application {
+    exec /var/lib/kolla/venv/bin/cinder-scheduler
+}
+
+
+process_config
+start_application
+
+

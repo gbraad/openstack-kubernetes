@@ -1,0 +1,443 @@
+# *********************************************************
+#
+# Please store password in a secret file
+#
+# *********************************************************
+
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cluster-config
+  labels:
+    system: openstack
+    component: configuration
+data:
+
+  cluster.deployment.reason: ''
+
+  cluster.os.release: mitaka
+  cluster.image.repository: my.favorite.docker.registry
+  cluster.image.namespace: monsoon
+
+  cluster.region: staging
+  cluster.dns.domain: namespace.svc.kubernetes.example-region.sap
+
+  cluster.config.path: /openstack-kube/openstack-kube/etc
+  cluster.debug: 'True'
+
+  cluster.physical.network: cp001
+  cluster.network.interface: eth0
+
+  cluster.configuration.repository: https://github.com/sapcc/openstack-kube.git
+  cluster.configuration.revision: master
+  cluster.default.availability.zone: example-region-rot1a
+
+  postgres.user: postgres
+  postgres.port.public: '6432'
+  postgres.port.private: '5432'
+  postgres.port.metrics: '9113'
+
+  pgbouncer.user: pgbouncer_stats
+
+  mysql.port.public: '3306'
+
+  mongodb.port.public: '27017'
+
+  memcache.host: memcached.namespace.svc.kubernetes.example-region.sap
+  memcache.port.public: '11211'
+  memcache.port.metrics: '9150'
+
+  rabbitmq.host: rabbitmq.namespace.svc.kubernetes.example-region.sap
+  rabbitmq.default.user: openstack
+  rabbitmq.admin.user: admin
+  rabbitmq.metrics.user: monitoring
+  rabbitmq.port.public: '5672'
+  rabbitmq.port.management: '15672'
+  rabbitmq.port.metrics: '9150'
+
+  keystone.port.metrics: '9102'
+  keystone.sentry.dsn: 'https://c1234@sentry.example-region.sap/9'
+
+  keystone.db.host: postgres-keystone.namespace.svc.kubernetes.example-region.sap
+
+  keystone.db.name: keystone
+  keystone.db.user: keystone
+
+  keystone.api.endpoint.protocol.admin: http
+  keystone.api.endpoint.protocol.admin.ext: https
+  keystone.api.endpoint.protocol.internal: http
+  keystone.api.endpoint.protocol.public: https
+
+  keystone.api.endpoint.host.admin: keystone.namespace.svc.kubernetes.example-region.sap
+  keystone.api.endpoint.host.admin.ext: identity-admin-3.example-region.sap
+  keystone.api.endpoint.host.internal: keystone.namespace.svc.kubernetes.example-region.sap
+  keystone.api.endpoint.host.public: identity-3.example-region.sap
+
+  keystone.api.port.admin: '35357'
+  keystone.api.port.admin.ext: '443'
+  keystone.api.port.internal: '5000'
+  keystone.api.port.public: '443'
+
+  keystone.bootstrap.user: admin
+
+  keystone.cloud.admin.project: 'admin'
+
+  #This is for backward compatibility in Monasca scripts and will be removed
+  keystone.endpoint.protocol: http
+  keystone.service.domain: Default
+  keystone.service.project: service
+  keystone.demo.project: demo
+
+
+  glance.db.host: postgres-glance.namespace.svc.kubernetes.example-region.sap
+  glance.db.name: glance
+  glance.db.user: glance
+  glance.service.user: glance
+
+  glance.api.endpoint.protocol.admin: http
+  glance.api.endpoint.protocol.internal: http
+  glance.api.endpoint.protocol.public: https
+
+  glance.api.endpoint.host.admin: glance.namespace.svc.kubernetes.example-region.sap
+  glance.api.endpoint.host.internal: glance.namespace.svc.kubernetes.example-region.sap
+  glance.api.endpoint.host.public: image-3.example-region.sap
+
+  glance.api.port.admin: '9292'
+  glance.api.port.internal: '9292'
+  glance.api.port.public: '443'
+
+  glance.port.metrics: '9102'
+  glance.sentry.dsn: 'https://12345@sentry.example-region.sap/13'
+
+  glance.default.store: swift
+  glance.swift.domain: Default
+  glance.swift.project: master
+
+  horizon.endpoint.host: horizon-3.example-region.sap
+  horizon.port.http: '8080'
+
+  nova.port.metrics: '9102'
+  nova.sentry.dsn: 'https://12345@sentry.example-region.sap/8'
+
+  nova.db.host: postgres-nova.namespace.svc.kubernetes.example-region.sap
+  nova.db.name: nova
+  nova.db.user: nova
+  nova.api.db.name: nova_api
+  nova.api.db.user: nova_api
+
+  nova.service.user: nova
+
+  nova.api.endpoint.protocol.admin: http
+  nova.api.endpoint.protocol.internal: http
+  nova.api.endpoint.protocol.public: https
+
+  nova.api.endpoint.host.admin: nova-api.namespace.svc.kubernetes.example-region.sap
+  nova.api.endpoint.host.internal: nova-api.namespace.svc.kubernetes.example-region.sap
+  nova.api.endpoint.host.public: compute-3.example-region.sap
+
+  nova.api.port.admin: '8774'
+  nova.api.port.internal: '8774'
+  nova.api.port.public: '443'
+
+  nova.metadata.port.internal: '8775'
+  nova.novnc.port.public: '443'
+  nova.spicehtml5.port.public: '6082'
+
+  nova.console.endpoint.protocol: https
+  nova.console.endpoint.host: compute-console-3.example-region.sap
+
+  nova.vmware.host: vmware.example-region.sap
+  nova.vmware.username: vmware
+  nova.vmware.cluster.name: cluster1
+  nova.vmware.datastore.regex: ephemeral*
+
+  ironic.db.host: postgres-ironic.namespace.svc.kubernetes.example-region.sap
+  ironic.db.name: ironic
+  ironic.db.user: ironic
+
+  ironic.service.user: ironic
+
+  ironic.api.endpoint.protocol.admin: http
+  ironic.api.endpoint.protocol.internal: http
+  ironic.api.endpoint.protocol.public: http
+
+  ironic.api.endpoint.host.admin: ironic-api.namespace.svc.kubernetes.example-region.sap
+  ironic.api.endpoint.host.internal: ironic-api.namespace.svc.kubernetes.example-region.sap
+  ironic.api.endpoint.host.public: baremetal-3.example-region.sap
+
+  ironic.api.port.admin: '6385'
+  ironic.api.port.internal: '6385'
+  ironic.api.port.public: '6385'
+
+  ironic.pxe.port.public: '69'
+
+
+  neutron.port.metrics: '9102'
+  neutron.sentry.dsn: 'https://9172b34c72874192b68f57d49e5ce48c:0daf9f2780254904bbb86afa8b5a764e@sentry.eu-de-1.cloud.sap/6'
+
+  neutron.db.host: postgres-neutron.namespace.svc.kubernetes.example-region.sap
+  neutron.db.name: neutron
+  neutron.db.user: neutron
+  neutron.service.user: neutron
+
+  neutron.api.endpoint.protocol.admin: http
+  neutron.api.endpoint.protocol.internal: http
+  neutron.api.endpoint.protocol.public: https
+
+  neutron.api.endpoint.host.admin: neutron-server.namespace.svc.kubernetes.example-region.sap
+  neutron.api.endpoint.host.internal: neutron-server.namespace.svc.kubernetes.example-region.sap
+  neutron.api.endpoint.host.public: network-3.example-region.sap
+
+  neutron.api.port.admin: '9696'
+  neutron.api.port.internal: '9696'
+  neutron.api.port.public: '443'
+
+  neutron.dhcp.lease.duration: '86400'
+
+  neutron.dns.forwarders: 10.0.0.2,10.0.0.3
+  neutron.dns.local.domain: openstack.example-region.sap
+  neutron.dns.external.driver: designate
+  neutron.dns.ml2.extension: dns
+
+  neutron.interface.driver: openvswitch
+
+  neutron.aci.apic.hosts: apic2.network.admin.corp:443
+  neutron.aci.apic.user: admin2
+  neutron.aci.apic.tenant.name: cc-openstack-staging
+
+  neutron.asr.l3.admin.tenant: l3admin
+  neutron.asr.physnet: lab-asr
+  neutron.asr.credential.1.user.name: admin
+  neutron.asr.hosting.device.template.1.credential: '1'
+  neutron.asr.hosting.device.template.3.credential: '1'
+
+  neutron.asr.hosting.device.3.name: device3
+  neutron.asr.hosting.device.3.id: device4-SN
+  neutron.asr.hosting.device.3.ip: 10.0.0.20
+  neutron.asr.hosting.device.3.credential: '1'
+  neutron.asr.hosting.device.3.intf.internal: '*:TenGigabitEthernet0/1/0'
+  neutron.asr.hosting.device.3.intf.external: '*:TenGigabitEthernet0/1/0'
+
+  neutron.asr.hosting.device.4.name: device4
+  neutron.asr.hosting.device.4.id: device4-SN
+  neutron.asr.hosting.device.4.ip: 10.0.0.26
+  neutron.asr.hosting.device.4.credential: '1'
+  neutron.asr.hosting.device.4.intf.internal: '*:TenGigabitEthernet0/2/0'
+  neutron.asr.hosting.device.4.intf.external: '*:TenGigabitEthernet0/2/0'
+
+
+  neutron.arista.physnet: net-arista
+  neutron.arista.eapi.host: arista1.example-region.sap
+  neutron.arista.eapi.username: arista
+
+  neutron.f5.physnet: net-f5
+  neutron.f5.icontrol.hostname: lb02.lab.mo.sap.corp
+  neutron.f5.icontrol.username: admin2
+  neutron.f5.external.physical.mappings: default:portchannel1:True
+
+  neutron.manila.physnet: manila-tor
+
+  barbican.db.host: postgres-barbican.namespace.svc.kubernetes.example-region.sap
+  barbican.db.name: barbican
+  barbican.db.user: barbican
+  barbican.service.user: barbican
+
+  barbican.api.endpoint.protocol.admin: http
+  barbican.api.endpoint.protocol.internal: http
+  barbican.api.endpoint.protocol.public: https
+
+  barbican.api.endpoint.host.admin: barbican-api.namespace.svc.kubernetes.example-region.sap
+  barbican.api.endpoint.host.internal: barbican-api.namespace.svc.kubernetes.example-region.sap
+  barbican.api.endpoint.host.public: keymanager-3.example-region.sap
+
+  barbican.api.port.admin: '9311'
+  barbican.api.port.internal: '9311'
+  barbican.api.port.public: '443'
+
+  cinder.db.host: postgres-cinder.namespace.svc.kubernetes.example-region.sap
+  cinder.db.name: cinder
+  cinder.db.user: cinder
+  cinder.service.user: cinder
+
+  cinder.port.metrics: '9102'
+  cinder.sentry.dsn: 'https://06cc0a182ffa46ac89c328f51175f946:3eea4dc7c93640b0813026eb96f67510@sentry.eu-de-1.cloud.sap/11'
+
+  cinder.api.endpoint.protocol.admin: http
+  cinder.api.endpoint.protocol.internal: http
+  cinder.api.endpoint.protocol.public: https
+
+  cinder.api.endpoint.host.admin: cinder-api.namespace.svc.kubernetes.example-region.sap
+  cinder.api.endpoint.host.internal: cinder-api.namespace.svc.kubernetes.example-region.sap
+  cinder.api.endpoint.host.public: volume-3.example-region.sap
+
+  cinder.api.port.admin: '8776'
+  cinder.api.port.internal: '8776'
+  cinder.api.port.public: '443'
+
+  cinder.netapp.vserver: netapp-cinder
+  cinder.netapp.host: netapp.example-region.sap
+  cinder.netapp.username: netapp
+
+
+  manila.db.host: postgres-manila.namespace.svc.kubernetes.example-region.sap
+  manila.db.name: manila
+  manila.db.user: manila
+  manila.service.user: manila
+  manila.endpoint.protocol: http
+  manila.endpoint.host: share-3.example-region.sap
+  manila.api.port.public: '8786'
+
+  manila.api.endpoint.protocol.admin: http
+  manila.api.endpoint.protocol.internal: http
+  manila.api.endpoint.protocol.public: https
+
+  manila.api.endpoint.host.admin: manila-api.namespace.svc.kubernetes.example-region.sap
+  manila.api.endpoint.host.internal: manila-api.namespace.svc.kubernetes.example-region.sap
+  manila.api.endpoint.host.public: share-3.example-region.sap
+
+  manila.api.port.admin: '8786'
+  manila.api.port.internal: '8786'
+  manila.api.port.public: '443'
+
+  manila.netapp.vserver: example-region-cinder
+  manila.netapp.host: netapp.example-region.sap
+  manila.netapp.username: admin
+  manila.netapp.root.volume.aggregate: aggr_01_1234
+  manila.netapp.aggregate.search.pattern: ^aggr_01.*$
+  manila.netapp.physical.network: manila-tor
+
+
+
+
+  ceilometer.service.user: ceilometer
+
+  ceilometer.rabbitmq.default.user: ceilometer
+  ceilometer.rabbitmq.port.public: '5672'
+  ceilometer.rabbitmq.port.mgmt: '15672'
+
+# this is for keeping ceilometer in its own namesapce at least in the beginning
+  ceilometer.dns.domain: ceilometer.svc.kubernetes.example-region.sap
+  ceilometer.external.ip: 10.0.0.123
+
+  #[dispatcher_http]
+  ceilometer.target: https://10.0.0.124:64032/
+  ceilometer.event.target: https://10.0.0.124:64031/
+  ceilometer.verify.ssl: /openstack-kube/openstack-kube/etc/ceilometer/staging-target.crt
+  ceilometer.timeout: '10'
+  ceilometer.batch.mode: 'True'
+
+  ceilometer.batch.count: '50'
+  ceilometer.batch.timeout: '15'
+  ceilometer.batch.polling.interval: '5'
+
+  monasca.admin.domain.name: ccadmin
+  monasca.admin.project: master
+  monasca.admin.username: monasca_admin
+  monasca.agent.username: monasca_agent
+  monasca.agent.user.domain.name: Default
+  monasca.api.username: monasca
+  monasca.api.project.name: service
+  monasca.api.project.domain.name: Default
+  monasca.influxdb.monitoring.username: monitoring
+  monasca.influxdb.retention: 31d
+  monasca.influxdb.port.public: '8086'
+  monasca.influxdb.port.admin: '8083'
+  monasca.influxdb.endpoint.host.internal: monasca-influxdb.monasca.svc.kubernetes.example-region.sap
+  monasca.mysql.port.internal: '3306'
+  monasca.mysql.endpoint.host.internal: monasca-mysql.monasca.svc.kubernetes.example-region.sap
+  monasca.storm.port.public: '8000'
+  monasca.storm.port.admin: '8088'
+  monasca.agent.port.statsd: '8125'
+  monasca.agent.port.forwarder: '17123'
+  monasca.zookeeper.port.follower: '2888'
+  monasca.zookeeper.port.leader: '3888'
+  monasca.kafka.port.internal: '9092'
+  monasca.kafka.delete.topics.enabled: 'true'
+  monasca.zookeeper.port.internal: '2181'
+  monasca.kibana.endpoint.host.public: logs.example-region.sap
+  monasca.kibana.port.public: '5601'
+  monasca.log.api.endpoint.host.public: monasca-logging.cc.example-region.sap
+  monasca.log.api.port.public: '8074'
+  monasca.log.api.endpoint.host.public: monasca-logging.example-region.sap
+  monasca.kibana.endpoint.host.public: logs.example-region.sap
+  monasca.api.port.public: '443'
+  monasca.api.port.internal: '8080'
+  monasca.api.port.admin: '8081'
+  monasca.api.endpoint.host.internal: monasca-api.monasca.svc.kubernetes.example-region.sap
+  monasca.api.endpoint.host.public: monitoring.example-region.sap
+  monasca.api.endpoint.protocol: https
+  monasca.api.endpoint.protocol.internal: http
+  monasca.elasticsearch.user: 'admin'
+  monasca.elasticsearch.data.retention: '10'
+  monasca.elasticsearch.port.cluster: '9300'
+  monasca.elasticsearch.port.http: '9200'
+  monasca.elasticsearch.endpoint.host.public: monasca-elasticsearch.example-region.sap
+  monasca.elasticsearch.endpoint.host.internal: monasca-es-client.monasca.svc.kubernetes.example-region.sap
+  monasca.elasticsearch.host.admin: monasca-es-admin.example-region.sap
+  monasca.elasticsearch.port.admin: '9000'
+  monasca.grafana.port.public: '3000'
+  monasca.grafana.endpoint.host.public: grafana.example-region.sap
+# load grafana dashboards and datasources from monasca-content on deployment and maybe wipe the old ones beforehand
+  monasca.grafana.load.datasources: 'False'
+  monasca.grafana.wipe.datasources: 'False'
+  monasca.grafana.load.dashboards: 'False'
+  monasca.grafana.wipe.dashboards: 'False'
+  monasca.grafana.local.user: 'local'
+  monasca.grafana.viewer.role: 'monasca-user'
+  monasca.grafana.admin.role: 'admin'
+  monasca.fluent.port: '8885'
+  monasca.elasticsearch.master.dummy.port: '63050'
+  monasca.elasticsearch.client.dummy.port: '63051'
+  monasca.elasticsearch.data.dummy.port: '63052'
+  monasca.zookeeper.dummy.port: '63053'
+  monasca.kafka.dummy.port: '63054'
+
+
+
+# grafana config settings - names required in this way, so that grafana can use the env variable right away
+  gf.security.admin.user: grafana_admin
+
+  designate.port.metrics: '9102'
+  designate.sentry.dsn: 'https://14106dad5c3a427d891acdb936cbde7a:3f9ad284c51d42f8b4e3215acd9b3c1d@sentry.eu-de-1.cloud.sap/16'
+
+  designate.db.host: designate-mariadb.namespace.svc.kubernetes.example-region.sap
+  designate.db.name: designate
+  designate.db.user: designate
+  designate.poolmanager.db.name: designate_poolmanager
+  designate.poolmanager.db.user: designate_poolmanager
+
+  designate.service.user: designate
+  designate.mdns.external.ip: 10.0.0.124
+  designate.mdns.port.public: '5354'
+
+  designate.api.endpoint.protocol.admin: http
+  designate.api.endpoint.protocol.internal: http
+  designate.api.endpoint.protocol.public: https
+
+  designate.api.endpoint.host.admin: designate-api.namespace.svc.kubernetes.example-region.sap
+  designate.api.endpoint.host.internal: designate-api.namespace.svc.kubernetes.example-region.sap
+  designate.api.endpoint.host.public: dns-3.example-region.sap
+
+  designate.api.port.admin: '9001'
+  designate.api.port.internal: '9001'
+  designate.api.port.public: '443'
+
+
+
+
+  swift.endpoint.protocol: https
+  swift.endpoint.host: objectstore.example-region.sap
+  swift.api.port.public: '443'
+
+  arc.endpoint.public: https://arc.example-region.sap
+  lyra.endpoint.public: https://lyra.example-region.sap
+
+  sapcc.billing.endpoint.public: https://sapcc-billing.example-region.sap:64040
+
+  # Webcli endpoints
+  webcli.endpoint.protocol.public: https
+  webcli.endpoint.host.public: webcli.example-region.sap
+  webcli.endpoint.port.public: '443'
+
+

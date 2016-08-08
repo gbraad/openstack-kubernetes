@@ -1,0 +1,28 @@
+metadata:
+  name: ceilometer-bin
+  labels:
+    system: openstack
+    service: metering
+    component: configuration
+
+data:
+  central-start: |
+    {{config['ceilometer/central-start']}}
+  collector-start: |
+    {{config['ceilometer/collector-start']}}
+  common-start: |
+    {{config['ceilometer/common-start']}}
+  compute-start: |
+    {{config['ceilometer/compute-start']}}
+  notification-start: |
+    {{config['ceilometer/notification-start']}}
+  rabbitmq-liveness: |
+    {{config['ceilometer/rabbitmq-liveness']}}
+  rabbitmq-prereq: |
+    {{config['ceilometer/rabbitmq-prereq']}}
+  rabbitmq-start: |
+    {{config['ceilometer/rabbitmq-start']}}
+  rabbitmq-stop: |
+    {{config['ceilometer/rabbitmq-stop']}}
+  common.sh: |
+    {{config['common.sh']}}

@@ -1,0 +1,34 @@
+#!/bin/bash
+
+# set some env variables from the openstack env properly based on env
+. /monasca-common-start/common-start
+
+# check if the zookeeper is already around as we need it
+. /monasca-zookeeper-cluster-prereq/zookeeper-cluster-prereq
+. /monasca-kafka-cluster-prereq/kafka-cluster-prereq
+
+function process_config {
+
+  mkdir -p /etc/monasca
+  cp /monasca-log-api-config-conf/log-api-config.conf  /etc/monasca/
+  cp /monasca-log-api-config-ini/log-api-config.ini  /etc/monasca/
+
+}
+
+function start_application {
+
+  # start memcached required by monasca-log-api for token-caching
+  /etc/init.d/memcached start
+
+  mkdir -p /var/log/monasca-log-api
+
+  # setup monasca agent after the process is up
+  (sleep 15; /openstack-kube/openstack-kube/scripts/monasca/cfg-monasca-agent.sh ) &
+
+  /usr/share/python/monasca-log-api/bin/gunicorn -k eventlet --worker-connections=2000 --backlog=1000 --paste /etc/monasca/log-api-config.ini
+
+}
+
+process_config
+
+start_application

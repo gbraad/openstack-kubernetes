@@ -1,0 +1,17 @@
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: arc 
+  namespace: arc 
+spec:
+  tls:
+     - secretName: arc 
+       hosts: [arc.eu-de-1.cloud.sap]
+  rules:
+  - host: arc.eu-de-1.cloud.sap 
+    http:
+      paths:
+      - path: /
+        backend:
+          serviceName: api 
+          servicePort: 80 

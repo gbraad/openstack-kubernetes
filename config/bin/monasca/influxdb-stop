@@ -1,0 +1,8 @@
+#!/bin/bash
+
+echo "Safely shutting down InfluxDB"
+filename=/var/opt/influxdb/snapshot.influxdb
+echo "* creating backup to $filename"
+/usr/bin/influxd backup $filename
+echo "* sending SIGTERM to influxd process"
+kill -SIGTERM $(pgrep influxd)

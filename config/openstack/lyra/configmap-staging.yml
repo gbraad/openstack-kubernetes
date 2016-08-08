@@ -1,0 +1,18 @@
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: lyra 
+data:
+  port: '80'
+  rails.env: production
+  monsoon.openstack.auth.api.endpoint: https://identity.staging.cloud.sap:5000/v3
+  monsoon.openstack.auth.api.userid: dashboard
+  monsoon.openstack.auth.api.domain: Default
+  monsoon.swift.username: automation
+  monsoon.swift.user.domain.id: default
+  monsoon.swift.project.name: master 
+  monsoon.swift.project.domain.name: ccadmin 
+
+
+
+  

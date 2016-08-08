@@ -1,0 +1,68 @@
+kind: ReplicationController
+apiVersion: v1
+
+metadata:
+  name: monasca-mysql
+  namespace: monasca
+  labels:
+    system: openstack
+    service: monitoring
+
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        component: monasca-mysql
+    spec:
+      nodeSelector:
+        zone: farm
+      terminationGracePeriodSeconds: 600
+      volumes:
+        - name: monasca-mysql-persistent-storage
+          persistentVolumeClaim:
+            claimName: monasca-mysql-pvclaim
+#          emptyDir: {}
+        - name: openstack-kube
+          gitRepo:
+            repository: {{cluster_config['cluster.configuration.repository']}}
+            revision: {{cluster_config['cluster.configuration.revision']}}
+        - name: cluster-config
+          configMap:
+            name: cluster-config
+        - name: cluster-secret
+          secret:
+            secretName: cluster-secret
+      containers:
+        - name: monasca-mysql
+          image: docker.mo.sap.corp/monasca/monasca-mysql:latest
+          imagePullPolicy: Always
+#          securityContext:
+#            privileged: true
+          command:
+            - dumb-init
+          args:
+            - /openstack-kube/openstack-kube/scripts/monasca/mysql_start
+          ports:
+            - name: mysql
+              containerPort: {{cluster_config['monasca.mysql.port.internal']}}
+          volumeMounts:
+            - name: monasca-mysql-persistent-storage
+              mountPath: /var/lib/mysql
+              readOnly: false
+            - mountPath: /openstack-kube
+              name: openstack-kube
+            - mountPath: /cluster-config
+              name: cluster-config
+            - mountPath: /cluster-secret
+              name: cluster-secret
+          lifecycle:
+            preStop:
+              exec:
+                command: ["/openstack-kube/openstack-kube/scripts/monasca/mysql_stop"]
+          livenessProbe:
+            exec:
+              command:
+              - /openstack-kube/openstack-kube/scripts/monasca/mysql_liveness
+            timeoutSeconds: 30
+            initialDelaySeconds: 120

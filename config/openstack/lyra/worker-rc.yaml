@@ -1,0 +1,60 @@
+# Generated from worker-rc.yaml.erb. Do not modify manually!
+# Edit worker-rc.yaml.erb and run 'make' instead.
+
+kind: ReplicationController
+apiVersion: v1
+
+metadata:
+  name: worker 
+  namespace: lyra
+
+spec:
+  replicas: 1
+  selector:
+    name: worker 
+  template:
+    metadata:
+      labels:
+        name: worker 
+    spec:
+      nodeSelector:
+        zone: farm
+      containers:
+        - name: worker 
+          image: docker.mo.sap.corp/monsoon/monsoon-automation:latest
+          args: [ que, ./config/environment.rb ] 
+          env:
+            - name: QUE_QUEUE
+              value: default
+            - name: QUE_WORKER_COUNT
+              value: "10"
+            - name: RAILS_ENV
+              valueFrom: { configMapKeyRef: { name: lyra, key: rails.env } }
+            - name: MONSOON_OPENSTACK_AUTH_API_ENDPOINT
+              valueFrom: { configMapKeyRef: { name: lyra, key: monsoon.openstack.auth.api.endpoint } }
+            - name: MONSOON_OPENSTACK_AUTH_API_USERID
+              valueFrom: { configMapKeyRef: { name: lyra, key: monsoon.openstack.auth.api.userid } }
+            - name: MONSOON_OPENSTACK_AUTH_API_DOMAIN
+              valueFrom: { configMapKeyRef: { name: lyra, key: monsoon.openstack.auth.api.domain } }
+            - name: MONSOON_SWIFT_USERNAME
+              valueFrom: { configMapKeyRef: { name: lyra, key: monsoon.swift.username } }
+            - name: MONSOON_SWIFT_USER_DOMAIN_ID
+              valueFrom: { configMapKeyRef: { name: lyra, key: monsoon.swift.user.domain.id } }
+            - name: MONSOON_SWIFT_PROJECT_NAME
+              valueFrom: { configMapKeyRef: { name: lyra, key: monsoon.swift.project.name } }
+            - name: MONSOON_SWIFT_PROJECT_DOMAIN_NAME
+              valueFrom: { configMapKeyRef: { name: lyra, key: monsoon.swift.project.domain.name } }
+            - name: MONSOON_DB_PASSWORD
+              valueFrom: { secretKeyRef:    { name: lyra, key: monsoon.db.password } }
+            - name: SECRET_KEY_BASE
+              valueFrom: { secretKeyRef:    { name: lyra, key: secret.key.base } }
+            - name: MONSOON_OPENSTACK_AUTH_API_PASSWORD
+              valueFrom: { secretKeyRef:    { name: lyra, key: monsoon.openstack.auth.api.password } }
+            - name: MONSOON_SWIFT_PASSWORD
+              valueFrom: { secretKeyRef:    { name: lyra, key: monsoon.swift.password } }
+            - name: MONSOON_SWIFT_TEMP_URL_KEY
+              valueFrom: { secretKeyRef:    { name: lyra, key: monsoon.swift.temp.url.key } }
+            - name: SENTRY_DSN
+              valueFrom: { secretKeyRef:    { name: lyra, key: sentry.dsn } }
+          #TODO: liveness checks
+          #TODO: adjust grace period

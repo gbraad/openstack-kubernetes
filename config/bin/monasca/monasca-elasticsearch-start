@@ -1,0 +1,55 @@
+#!/bin/bash
+
+# set some env variables from the openstack env properly based on env
+. /monasca-common-start/common-start
+
+function process_config {
+
+cp /monasca-elasticsearch-check-py/check.py /elasticsearch/config
+cp /monasca-elasticsearch-elasticsearch-yaml/elasticsearch.yaml /elasticsearch/config
+cp /monasca-elasticsearch-logging-yaml/logging.yaml /elasticsearch/config
+
+}
+
+function start_application {
+
+  # provision elasticsearch user
+  addgroup sudo
+  groupadd elasticsearch
+  useradd -g  elasticsearch elasticsearch
+  adduser elasticsearch sudo
+  chown -R elasticsearch:elasticsearch /elasticsearch /data
+  echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
+
+  # set environment
+  export CLUSTER_NAME=${CLUSTER_NAME:-default}
+  export NODE_MASTER=${NODE_MASTER:-true}
+  export NODE_DATA=${NODE_DATA:-true}
+  export HTTP_ENABLE=${HTTP_ENABLE:-true}
+  export MULTICAST=${MULTICAST:-true}
+  export NAMESPACE=${NAMESPACE:-default}
+
+  if [ "$ES_HEAP_SIZE" = "" ]; then
+     export ES_HEAP_SIZE=10g
+  fi
+
+  #/elasticsearch/bin/plugin -Dhttps.proxyPort=8080 -Dhttps.proxyHost=proxy.wdf.sap.corp install -b https://github.com/sscarduzio/elasticsearch-readonlyrest-plugin/blob/master/download/elasticsearch-readonlyrest-v1.9.4_es-v2.3.4.zip?raw=true
+
+  # setup monasca agent after the process is up
+  #if [ $HTTP_ENABLE = "true" ]; then 
+
+  #    (sleep 60; /openstack-kube/openstack-kube/scripts/monasca/cfg-monasca-agent.sh ) &
+  #    (sleep 100 && rm /etc/monasca/agent/conf.d/* && cp -f /openstack-kube/openstack-kube/etc/monasca-elasticsearch/elastic.py /usr/share/python/monasca-agent/lib/python2.7/site-packages/monasca_agent/collector/checks_d/ && echo -e "init_config:\ninstances:\n-   url: http://127.0.0.1:9200\n    username: ${MONASCA_ELASTICSEARCH_USER}\n    password: ${MONASCA_ELASTICSEARCH_PASSWORD}">/etc/monasca/agent/conf.d/elastic.yaml && /etc/init.d/monasca-agent restart) &
+  #fi
+
+  # enable resync (again, it is disabled by the stop script)
+  (sleep 180; curl -u ${MONASCA_ELASTICSEARCH_USER}:${MONASCA_ELASTICSEARCH_PASSWORD} -XPUT localhost:9200/_cluster/settings -d '{"transient": { "cluster.routing.allocation.enable": "all" } }' && curl -u ${MONASCA_ELASTICSEARCH_USER}:${MONASCA_ELASTICSEARCH_PASSWORD} -XPUT 'http://localhost:9200/_template/logstash' -d "@/openstack-kube/openstack-kube/etc/monasca-elasticsearch/logstash.schema.json") &
+
+  # run
+  echo "Starting ElasticSearch with lock /data/.lock"
+  chpst -u elasticsearch -L /data/.lock /elasticsearch/bin/elasticsearch 
+}
+
+process_config
+
+start_application

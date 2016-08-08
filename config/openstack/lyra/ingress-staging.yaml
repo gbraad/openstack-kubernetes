@@ -1,0 +1,24 @@
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: lyra 
+  namespace: lyra 
+spec:
+  tls:
+     - secretName: lyra 
+       hosts: [lyra.staging.cloud.sap, automation-staging.eu-de-1.cc.mo.sap.corp]
+  rules:
+  - host: lyra.staging.cloud.sap 
+    http:
+      paths:
+      - path: /
+        backend:
+          serviceName: api 
+          servicePort: 80
+  - host: automation-staging.eu-de-1.cc.mo.sap.corp 
+    http:
+      paths:
+      - path: /
+        backend:
+          serviceName: api 
+          servicePort: 80

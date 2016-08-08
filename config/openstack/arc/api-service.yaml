@@ -1,0 +1,15 @@
+kind: Service
+apiVersion: v1
+
+metadata:
+  annotations:
+    prometheus.io/scrape: "true"  
+  name: api 
+  namespace: arc
+
+spec:
+  type: ClusterIP 
+  selector:
+    name: api 
+  ports: 
+    - port: 80 

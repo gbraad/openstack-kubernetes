@@ -1,0 +1,19 @@
+kind: Service
+apiVersion: v1
+
+metadata:
+  name: nova-console
+  namespace: monsoon3
+  labels:
+    system: openstack
+    component: nova
+spec:
+  type: NodePort
+  selector:
+    name: nova-console
+
+  ports:
+    - name: nonvc-proxy
+      port: {{cluster_config['nova.novnc.port.public']}}
+    - name: spicehtml5-proxy
+      port: {{cluster_config['nova.spicehtml5.port.public']}}

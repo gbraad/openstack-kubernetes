@@ -1,0 +1,34 @@
+#!/bin/bash
+
+# set some env variables from the openstack env properly based on env
+. /monasca-common-start/common-start
+
+function process_config {
+
+  cp /monasca-logstash-monasca-log-$LOGSTASH_TYPE-conf/monasca-log-$LOGSTASH_TYPE.conf /etc/logstash/conf.d
+
+}
+
+function start_application {
+
+  # provision elasticsearch user
+
+  addgroup sudo
+  groupadd logstash
+  useradd -g logstash logstash
+  adduser logstash sudo
+  echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
+  mkdir -p /etc/logstash/conf.d
+
+  chown -R logstash:logstash /logstash /etc/logstash/conf.d/
+
+  # setup monasca agent after the process is up
+  (sleep 60; /openstack-kube/openstack-kube/scripts/monasca/cfg-monasca-agent.sh ) &
+
+  sudo -E -u logstash /logstash/bin/logstash -f /etc/logstash/conf.d/monasca-log-$LOGSTASH_TYPE.conf
+
+}
+
+process_config
+
+start_application

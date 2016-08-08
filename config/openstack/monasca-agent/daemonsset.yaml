@@ -1,0 +1,76 @@
+kind: DaemonSet
+apiVersion: extensions/v1beta1
+
+metadata:
+  name: monasca-agent
+  namespace: monasca
+
+spec:
+  template:
+    metadata:
+      labels:
+        component: monasca-agent
+    spec:
+      volumes:
+        - name: openstack-kube
+          gitRepo:
+            repository: {{cluster_config['cluster.configuration.repository']}}
+            revision: {{cluster_config['cluster.configuration.revision']}}
+        - name: cluster-config
+          configMap:
+            name: cluster-config
+        - name: cluster-secret
+          secret:
+            secretName: cluster-secret
+      containers:
+        - name: monasca-agent-forwarder
+          image: docker.mo.sap.corp/monasca/monasca-agent:baremetal
+          imagePullPolicy: Always
+          command:
+            - dumb-init
+          args:
+            - monasca-agent-forwarder
+          ports:
+            - containerPort:  {{cluster_config['monasca.agent.port.forwarder']}}
+          volumeMounts:
+            - mountPath: /openstack-kube
+              name: openstack-kube
+            - mountPath: /cluster-config
+              name: cluster-config
+            - mountPath: /cluster-secret
+              name: cluster-secret
+        - name: monasca-agent-collector
+          image: docker.mo.sap.corp/monasca/monasca-agent:baremetal
+          imagePullPolicy: Always
+          command:
+            - dumb-init
+          args:
+            - monasca-agent-collector
+          volumeMounts:
+            - mountPath: /openstack-kube
+              name: openstack-kube
+            - mountPath: /cluster-config
+              name: cluster-config
+            - mountPath: /cluster-secret
+              name: cluster-secret
+          env:
+            - name: KUBE_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+        - name: monasca-agent-statsd
+          image: docker.mo.sap.corp/monasca/monasca-agent:baremetal
+          imagePullPolicy: Always
+          command:
+            - dumb-init
+          args:
+            - monasca-agent-statsd
+          ports:
+            - containerPort:  {{cluster_config['monasca.agent.port.statsd']}}
+          volumeMounts:
+            - mountPath: /openstack-kube
+              name: openstack-kube
+            - mountPath: /cluster-config
+              name: cluster-config
+            - mountPath: /cluster-secret
+              name: cluster-secret
